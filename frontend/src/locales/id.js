@@ -786,6 +786,25 @@ export default {
   'Take me to the app': 'Bawa aku ke aplikasinya',
   'Today is a rest day — your first session is {0}.':
     'Hari ini hari istirahat — sesi pertamamu hari {0}.',
+  // --- exercise demos ---
+  'Exercise demos': 'Tampilan animasi gerakan',
+  'Dimmed': 'Diredupkan',
+  'Dark': 'Gelap',
+  'Original': 'Asli',
+  'The demos are drawn on white. This is how they sit in the dark theme.':
+    'Animasinya digambar di latar putih. Ini caranya tampil di tema gelap.',
+  // --- per-exercise rest ---
+  'Rest between sets': 'Istirahat antar set',
+  'Follow the routine ({0})': 'Ikut rutinitas ({0})',
+  'Follow settings ({0})': 'Ikut pengaturan ({0})',
+  'This exercise rests {0}.': 'Gerakan ini istirahat {0}.',
+  'Heavier compounds usually want more rest than isolation work.':
+    'Gerakan compound berat biasanya butuh istirahat lebih lama daripada gerakan isolasi.',
+  // --- rest alert ---
+  'Rest timer alert': 'Alarm timer istirahat',
+  'Rings even if you switch apps between sets.':
+    'Tetap berbunyi walau kamu pindah aplikasi di antara set.',
+  'Back to it.': 'Lanjut lagi.',
   // --- warm-up sets ---
   'W': 'P',
   'Tap to mark as a warm-up': 'Ketuk untuk menandai sebagai pemanasan',

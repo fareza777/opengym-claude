@@ -43,6 +43,17 @@ export const isPerSide = cfg => !!(cfg && cfg.side)
 // the whole session as a miss and eventually deloads you for warming up
 // properly. Every aggregate that answers "what did you actually train" filters
 // these out; the log still keeps them, because what you did is what you did.
+// Rest between sets, resolved the same way a progression policy is: the
+// exercise's own value, else the routine's, else the profile default. Three
+// minutes after a heavy squat and sixty seconds after a lateral raise are not
+// the same rest, and one global number could not say so — which was odd for an
+// app whose whole argument is that it works the training variables out for you.
+export const DEFAULT_REST = 90
+export function restFor(cfg, routine, S) {
+  const v = (cfg && cfg.rest) || (routine && routine.rest) || (S && S.restSec) || DEFAULT_REST
+  return Math.max(5, Math.round(v))
+}
+
 export const isWarm = s => !!(s && s.warm)
 export const isWork = s => !!(s && s.done && !s.warm)
 // What one side did, for display only. Half of an odd total is shown as it falls (8.5) rather

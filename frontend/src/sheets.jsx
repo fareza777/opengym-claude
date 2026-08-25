@@ -3,7 +3,7 @@ import { useStore } from './store/useStore.js'
 import { useUI } from './store/useUI.js'
 import { EXDB, EXIDX, BODYPARTS, isCardio, isBodyweightEq, allExercises, equipmentOf } from './lib/exercises.js'
 import { fmtDate, fmtNum, fmtVol, fmtDur, durPart, todayISO, uid, exCount, DAYN, MONTHS_LONG, ACCENTS } from './lib/format.js'
-import { lastEntryFor, bestWeightFor, buildSets, effectiveRoutineId, workoutVolume, setsDone, setsDoneActive, lastBW, supersetUnits, unitOf, setLabel, defaultConfig, cleanupSg, modeOf, effortOf, isBw, isPerSide, sideReps } from './lib/history.js'
+import { lastEntryFor, bestWeightFor, buildSets, effectiveRoutineId, workoutVolume, setsDone, setsDoneActive, lastBW, supersetUnits, unitOf, setLabel, defaultConfig, cleanupSg, modeOf, effortOf, isBw, isPerSide, sideReps, restFor, fmtSec } from './lib/history.js'
 import { beep, vibrate } from './lib/sound.js'
 import { t, instrFor, getLang, INSTR_LANGS } from './lib/i18n.js'
 import { nav } from './lib/nav.js'
@@ -459,6 +459,29 @@ export const exercisePicker = onPick => ui().openSheet(close => <ExercisePicker 
 // Progression settings for one exercise (issue #17). Shown inside the config sheet because
 // "how does this lift go up" belongs next to sets and reps, not in a separate screen. Left
 // on "follow the routine" it inherits, so most people never touch it.
+// Rest sits with progression rather than with sets/reps because it is the same
+// kind of setting: a rule that falls back to the routine and then to the profile,
+// and one most people will never touch.
+function RestField({ c, setC, routine, S }) {
+  const inherited = restFor(null, routine, S)
+  const own = c.rest > 0
+  return <>
+    <h4 className="sec">{t('Rest between sets')}</h4>
+    <div className="sect-b" style={{ marginBottom: 8 }}>
+      <Row icon="timer" iconTint="var(--acc)" title={t('Follow the routine ({0})', fmtSec(inherited))}>
+        <Switch checked={!own} onChange={v => setC(x => ({ ...x, rest: v ? undefined : inherited }))} />
+      </Row>
+    </div>
+    {own && <div className="row cfgrow" style={{ marginBottom: 8 }}>
+      <Stepper label={t('Seconds')} value={c.rest} step={15} decimal={false}
+        onChange={v => setC(x => ({ ...x, rest: Math.max(5, Math.round(v)) }))} />
+    </div>}
+    <div className="small dim" style={{ marginBottom: 18 }}>
+      {own ? t('This exercise rests {0}.', fmtSec(c.rest)) : t('Heavier compounds usually want more rest than isolation work.')}
+    </div>
+  </>
+}
+
 function ProgressionFields({ ex, mode, c, setC, routine, unit }) {
   const options = POLICIES_FOR[mode] || ['off']
   if (options.length < 2) return null
@@ -518,6 +541,9 @@ function ExConfig({ ex, existing, onSave, onDelete, close, routine }) {
       const reps = perSide ? Math.ceil(typed / 2) * 2 : typed
       const out = { sets, mode: 'reps', reps, weight: Math.max(0, c.weight || 0), ...flags, ...(perSide ? { side: true } : {}), ...prog }
       if (policyFor({ ...c, id: ex.id }, routine, 'reps') === 'double') out.repsMin = Math.min(reps, Math.max(1, Math.round(c.repsMin) || Math.max(1, reps - 2)))
+      // only when it differs from what would be inherited, so a shared plan file
+      // does not carry a rest value that was never a decision
+      if (c.rest > 0) out.rest = Math.max(5, Math.round(c.rest))
       // A ceiling below the working reps would tell you to add a set on day one.
       if (bw && !(out.weight > 0) && c.repsMax > 0) out.repsMax = Math.max(reps, Math.round(c.repsMax))
       onSave(out)
@@ -591,6 +617,7 @@ function ExConfig({ ex, existing, onSave, onDelete, close, routine }) {
         : t('Reps climb by one whenever every set was clean. Set a ceiling to add sets instead of reps forever.')}
     </div>}
     <ProgressionFields ex={ex} mode={mode} c={c} setC={setC} routine={routine} unit={st.unit} />
+    <RestField c={c} setC={setC} routine={routine} S={st} />
     <Button variant="primary" onClick={save}>{existing ? t('Save') : t('Add to routine')}</Button>
     {ex.custom && <><div style={{ height: 8 }} /><Button icon="pencil" onClick={() => { close(); customExSheet(ex) }}>{t('Edit or delete this exercise')}</Button></>}
     {onDelete && <><div style={{ height: 8 }} /><Button variant="danger" onClick={() => { close(); onDelete() }}>{t('Remove from routine')}</Button></>}

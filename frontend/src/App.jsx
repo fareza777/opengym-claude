@@ -44,10 +44,11 @@ function resolveColor(css) {
   } catch (e) { return '' }
 }
 
-function applyPrefs(theme, accent) {
+function applyPrefs(theme, accent, demo) {
   const de = document.documentElement
   de.dataset.theme = theme === 'light' ? 'light' : 'dark'
   de.dataset.accent = ACCENTS[accent] ? accent : 'ember'
+  de.dataset.demo = demo === 'invert' || demo === 'plain' ? demo : 'dim'
   // Matches --surf for the active theme. Read from the element rather than
   // hard-coded, because --surf is mixed from the accent seed — a hard-coded pair
   // was visibly the wrong hue behind the status bar on every accent but one.
@@ -69,7 +70,7 @@ function Shell() {
   const isGuest = useStore(s => s.isGuest())
   const langV = useLang()   // re-renders the whole shell when the language (pack) changes
   useEffect(() => { setNav(navigate) }, [navigate])
-  useEffect(() => { applyPrefs(S.theme, S.accent) }, [S.theme, S.accent])
+  useEffect(() => { applyPrefs(S.theme, S.accent, S.demo) }, [S.theme, S.accent, S.demo])
   // A profile that has never picked a language follows the phone; an explicit
   // choice in Settings is stored and always wins.
   const lang = S.lang || deviceLang()

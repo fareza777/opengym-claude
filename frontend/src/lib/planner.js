@@ -25,6 +25,10 @@ export const GOALS = ['muscle', 'strength', 'calisthenics', 'fitness']
 export const EQUIP = ['gym', 'home', 'none']
 export const DAY_OPTIONS = [2, 3, 4, 5, 6]
 
+// Rest, in seconds, by the role the movement plays in the session.
+const REST_COMPOUND = 180
+const REST_ACCESSORY = 90
+
 // Rep scheme and progression policy per goal. `strength` gets Greyskull because
 // its AMRAP top set is what makes a low-rep linear program self-correcting;
 // `muscle` gets double progression because adding a rep is a smaller jump than
@@ -165,6 +169,10 @@ export function buildPlan({ goal = 'muscle', days = 3, equipment = 'gym' } = {})
       const cfg = {
         id: hit.id,
         sets: compound ? spec.compoundSets : spec.sets,
+        // A generated plan should not leave rest as one number for the whole app.
+        // A heavy compound wants three minutes; a lateral raise does not, and
+        // making someone wait it out is how a 45-minute session becomes 75.
+        rest: compound ? REST_COMPOUND : REST_ACCESSORY,
         // Unilateral work is logged as the total across both sides, so its
         // target has to be even and roughly double.
         reps: hit.side ? Math.round(spec.reps) * 2 : spec.reps,

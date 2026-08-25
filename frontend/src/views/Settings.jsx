@@ -10,9 +10,14 @@ import { pushSupported, enablePush, disablePush, sendTestPush } from '../lib/pus
 import { wakeLockSupported } from '../lib/wakelock.js'
 import { t, LANGS, INSTR_LANGS, deviceLang } from '../lib/i18n.js'
 import { DEMO, REPO } from '../lib/demo.js'
-import { MOBILE, shareExport, syncReminder } from '../lib/mobile.js'
+import { MOBILE, shareExport, syncReminder, requestNotificationPermission } from '../lib/mobile.js'
 import { cacheSize, cacheCount, clearCache, preload } from '../lib/media-cache.js'
-import { imgSrc, gifSrc, exOr } from '../lib/exercises.js'
+import { imgSrc, gifSrc, exOr, EXDB } from '../lib/exercises.js'
+import { Thumb } from '../components/Media.jsx'
+
+// A real exercise from the catalogue, so the preview shows the actual artwork
+// this setting affects rather than a coloured rectangle.
+const DEMO_EX = EXDB.find(e => e.id === '0025') || EXDB.find(e => e.img) || {}
 import { loadStarterPlan, confirmSheet, importFromApp } from '../sheets.jsx'
 import Icon from '../components/Icon.jsx'
 import { Section, Row, SelectRow, Switch, Segmented, Button, TextField } from '../components/ui.jsx'
@@ -164,6 +169,24 @@ export default function Settings() {
           onChange={v => update(s => { s.body = v })}
         />
       </Row>
+      {/* Offered with a live preview rather than described, because "invert" is a
+          judgement about how these particular illustrations look and the only
+          person who can make it is the one looking at them. Hidden in light mode,
+          where the demos are shown exactly as drawn. */}
+      {S.theme !== 'light' && <div className="lrow" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 10, paddingTop: 13, paddingBottom: 14 }}>
+        <span className="lrow-t">{t('Exercise demos')}</span>
+        <div className="demo-preview">
+          {['dim', 'invert', 'plain'].map(v => (
+            <button key={v} className={'demo-opt' + ((S.demo || 'dim') === v ? ' on' : '')}
+              data-demo={v} onClick={() => update(s => { s.demo = v })} aria-pressed={(S.demo || 'dim') === v}>
+              <span className="demo-swatch"><Thumb ex={DEMO_EX} /></span>
+              <span className="demo-lbl">{t(v === 'dim' ? 'Dimmed' : v === 'invert' ? 'Dark' : 'Original')}</span>
+            </button>
+          ))}
+        </div>
+        <span className="lrow-s">{t('The demos are drawn on white. This is how they sit in the dark theme.')}</span>
+      </div>}
+
       <div className="lrow" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 12, paddingTop: 13, paddingBottom: 14 }}>
         <span className="lrow-t">{t('Accent color')}</span>
         <div className="swatches">
@@ -269,9 +292,24 @@ function MobileReminderCard({ S, update, toast }) {
     }
     setReminder({ on })
   }
+  // The rest alert is a scheduled local notification, so it needs the same OS
+  // permission the reminder does — and someone who never turns the reminder on
+  // would otherwise never be asked, and would just find that their rest timer
+  // does not ring when they switch apps. Hence its own switch.
+  const toggleRest = async () => {
+    const on = !(S.restAlert !== false)
+    if (on && !(await requestNotificationPermission())) {
+      toast(t('Could not change notification settings')); return
+    }
+    update(s => { s.restAlert = on })
+  }
   return (
     <Section title={t('Notifications')}
       footer={S.reminder?.on ? t('Reminds you at this time on days that have a routine planned.') : null}>
+      <Row icon="timer" iconTint="var(--acc)" title={t('Rest timer alert')}
+        subtitle={t('Rings even if you switch apps between sets.')}>
+        <Switch checked={S.restAlert !== false} onChange={toggleRest} />
+      </Row>
       <Row icon="calendar" iconTint="var(--orange)" title={t('Workout day reminder')}>
         <Switch checked={!!S.reminder?.on} onChange={toggle} />
       </Row>

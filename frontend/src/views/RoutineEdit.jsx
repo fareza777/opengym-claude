@@ -4,7 +4,7 @@ import { useStore } from '../store/useStore.js'
 import { exOr } from '../lib/exercises.js'
 import { uid } from '../lib/format.js'
 import { t } from '../lib/i18n.js'
-import { supersetUnits, cleanupSg, exLine } from '../lib/history.js'
+import { supersetUnits, cleanupSg, exLine, fmtSec, DEFAULT_REST } from '../lib/history.js'
 import { Thumb } from '../components/Media.jsx'
 import { glyphPicker, exercisePicker, exConfigSheet, confirmSheet } from '../sheets.jsx'
 import Icon from '../components/Icon.jsx'
@@ -54,6 +54,14 @@ export default function RoutineEdit() {
     </div>
     <div className="small dim" style={{ margin: '-10px 2px 16px' }}>
       {t('Applies to every exercise in this routine that does not set its own rule.')}
+    </div>
+
+    <div className="sect-b" style={{ marginBottom: 16 }}>
+      <SelectRow icon="timer" title={t('Rest between sets')} sheetTitle={t('Rest between sets')}
+        value={String(r.rest || 0)}
+        onChange={v => update(s => { const rr = s.routines.find(x => x.id === id); if (+v) rr.rest = +v; else delete rr.rest })}
+        options={[{ value: '0', label: t('Follow settings ({0})', fmtSec(S.restSec || DEFAULT_REST)) },
+          ...[45, 60, 90, 120, 150, 180, 240, 300].map(v => ({ value: String(v), label: fmtSec(v) }))]} />
     </div>
 
     {r.ex.length ? <div className="list">{r.ex.map((e, i) => {

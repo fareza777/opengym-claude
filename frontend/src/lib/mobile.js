@@ -58,6 +58,63 @@ export async function syncReminder(S, interactive = false) {
   } catch (e) { return false }
 }
 
+// Rest-timer alert, as a scheduled local notification.
+//
+// The rest countdown alerts by beeping from the running WebView, and Android
+// suspends timers in a WebView that is not in front. Switch to Spotify between
+// sets — which is what everyone does — and the alert never fires. There was a
+// notification path already, but it was the wrong one: pushRestTimer() speaks to
+// the self-hosted server's Web Push endpoint and returns immediately unless a
+// user is signed in, and the store build has no server and no user, ever.
+//
+// So the same plugin that already schedules the workout-day reminder schedules
+// this too. The timer keeps a wall-clock `endsAt`, which is what makes it exact.
+// Fixed id, because there is only ever one rest running and re-scheduling has to
+// replace the previous one rather than stack on it.
+const REST_ID = 90
+
+// Asks for POST_NOTIFICATIONS. Only ever called from a Settings switch, never
+// from the workout screen — a permission dialog over the set you are logging is
+// worse than a missing beep.
+export async function requestNotificationPermission() {
+  if (!MOBILE) return false
+  try {
+    const { LocalNotifications } = await import('@capacitor/local-notifications')
+    let perm = await LocalNotifications.checkPermissions()
+    if (perm.display !== 'granted') perm = await LocalNotifications.requestPermissions()
+    return perm.display === 'granted'
+  } catch (e) { return false }
+}
+
+export async function scheduleRestAlert(endsAt) {
+  if (!MOBILE) return
+  try {
+    const { LocalNotifications } = await import('@capacitor/local-notifications')
+    await cancelRestAlert()
+    // Never ask for the permission here: this fires mid-workout, and a dialog
+    // over the set you are logging is worse than a missing beep. The Settings
+    // toggle is where the prompt belongs.
+    const perm = await LocalNotifications.checkPermissions()
+    if (perm.display !== 'granted') return
+    const at = new Date(endsAt)
+    if (at.getTime() - Date.now() < 1000) return
+    await LocalNotifications.schedule({ notifications: [{
+      id: REST_ID,
+      title: t('Rest over — next set!'),
+      body: t('Back to it.'),
+      schedule: { at, allowWhileIdle: true },
+    }] })
+  } catch (e) { /* the in-app beep still covers the foreground case */ }
+}
+
+export async function cancelRestAlert() {
+  if (!MOBILE) return
+  try {
+    const { LocalNotifications } = await import('@capacitor/local-notifications')
+    await LocalNotifications.cancel({ notifications: [{ id: REST_ID }] })
+  } catch (e) { /* */ }
+}
+
 // WKWebView can't do blob-URL downloads, so the backup goes out through the OS share sheet
 // (Files, AirDrop, mail, …) from a temp file instead.
 export async function shareExport(json, filename) {

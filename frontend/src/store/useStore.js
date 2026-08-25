@@ -21,6 +21,15 @@ export const DEF = {
   // server pull, backup import) still falls back to the `showRir` boolean this replaced and
   // keeps the column it had. See effortOf.
   reminder: { on: false, time: '08:00', tz: null }, effort: null,
+  // Native build only: fire a local notification when the rest timer ends, so it
+  // still rings with the app in the background. Defaults on — it is what a rest
+  // timer is for — and the OS permission is asked for by the Settings switch,
+  // never mid-workout.
+  restAlert: true,
+  // How the exercise demos are rendered in dark mode: 'dim' (default, safe),
+  // 'invert' (genuinely dark, suits most of these flat illustrations) or 'plain'
+  // (the source untouched). Light mode always uses the source.
+  demo: 'dim',
   // Set once the first-run flow has been seen (or skipped). Absent on every
   // profile written before it existed, which is why App.jsx also checks whether
   // the profile has any data — an upgrading user must never be sent back to a

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { modeOf, isTimed, fmtSec, setLabel, defaultConfig, buildSets, exLine, workoutVolume, effortOf, stepEffort, capEffort, isBw, isPerSide, sideReps, repStep } from './history.js'
+import { modeOf, isTimed, fmtSec, setLabel, defaultConfig, buildSets, exLine, workoutVolume, effortOf, stepEffort, capEffort, isBw, isPerSide, sideReps, repStep, restFor, DEFAULT_REST } from './history.js'
 import { EXDB } from './exercises.js'
 
 // Real ids out of the shipped catalogue, so the body-part fallback is exercised for real.
@@ -394,5 +394,24 @@ describe('workoutVolume', () => {
   it('leaves an unloaded bodyweight set at zero volume rather than inventing a number', () => {
     const w = { entries: [{ id: BW, target: { bodyweight: true }, sets: [{ w: 0, r: 20, done: true }] }] }
     expect(workoutVolume(w)).toBe(0)
+  })
+})
+
+
+describe('restFor', () => {
+  const S = { restSec: 90 }
+  it('falls back to the profile default when nothing else says otherwise', () => {
+    expect(restFor(null, null, S)).toBe(90)
+    expect(restFor({}, {}, S)).toBe(90)
+  })
+  it('lets a routine override the profile', () => {
+    expect(restFor({}, { rest: 150 }, S)).toBe(150)
+  })
+  it('lets an exercise override its routine', () => {
+    expect(restFor({ rest: 240 }, { rest: 150 }, S)).toBe(240)
+  })
+  it('never returns something shorter than five seconds', () => {
+    expect(restFor({ rest: 0 }, null, { restSec: 0 })).toBe(DEFAULT_REST)
+    expect(restFor({ rest: 1 }, null, S)).toBe(5)
   })
 })

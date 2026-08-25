@@ -274,6 +274,26 @@
     tones instead of hand-picking ~100 values: a new accent is one line and it
     cannot quietly fail. If you change a seed, re-measure — do not assume.      */
 
+/* ---------------------------------------------------- exercise demos ------ */
+/*  Light theme leaves them exactly as the dataset drew them. */
+:root[data-theme="light"] { --demo-bg:#fff; --demo-filter:none }
+
+/*  Dark, default treatment: a surface-toned plate and a dimmed image. Always
+    correct — it can never make an asset look wrong, only quieter. */
+:root:not([data-theme="light"]) {
+  --demo-bg:var(--surf-c-high);
+  --demo-filter:brightness(.78) contrast(1.06);
+}
+/*  Dark, opt-in treatment: these are flat line illustrations on white, so an
+    inversion gives a genuinely dark demo with the figure intact. Hue-rotate puts
+    the colours back where they started. */
+:root:not([data-theme="light"])[data-demo="invert"] {
+  --demo-bg:var(--surf-c);
+  --demo-filter:invert(1) hue-rotate(180deg) brightness(.92);
+}
+/*  And an escape hatch for anyone who wants the source untouched. */
+:root[data-demo="plain"] { --demo-bg:#fff; --demo-filter:none }
+
 /* ================================================================ RESET === */
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html{
@@ -667,7 +687,8 @@ h4.sec{
 .item:active{background:var(--surf-c-high)}
 .thumb{
   width:52px;height:52px;border-radius:var(--r-md);object-fit:cover;
-  background:#fff;flex:none;
+  background:var(--demo-bg,#fff);flex:none;
+  filter:var(--demo-filter,none);
 }
 .thumb-x{
   display:flex;align-items:center;justify-content:center;font-size:22px;
@@ -944,11 +965,26 @@ h4.sec{
   transition:width var(--med) var(--ease-emph);
   box-shadow:4px 0 0 0 var(--surf-c);
 }
+/*  The dataset's demos are drawn on white. Painting the container white to match
+    made the largest element of the workout screen — 300px tall, stared at under a
+    wake lock, usually in a badly lit room — a block of pure white on a near-black
+    interface. Every other surface in the app was tuned to a tonal ramp; this one
+    sat outside it and undid the work at the exact moment the app is being used.
+
+    Dark theme puts the demo on a surface tone and takes the artwork down in
+    luminance. `--demo-filter` is what the Settings toggle swaps: `dim` is the
+    safe default (never uglier than the source), `invert` genuinely darkens these
+    flat illustrations but will not suit every asset, which is why it is offered
+    rather than imposed.                                                        */
 .exmedia{
-  position:relative;border-radius:var(--r-lg);overflow:hidden;background:#fff;
+  position:relative;border-radius:var(--r-lg);overflow:hidden;
+  background:var(--demo-bg,#fff);
   margin-bottom:14px;
 }
-.exmedia img{width:100%;height:300px;object-fit:contain;display:block}
+.exmedia img{
+  width:100%;height:300px;object-fit:contain;display:block;
+  filter:var(--demo-filter,none);
+}
 .exmedia .gifhint,.exmedia .giftoggle{
   position:absolute;bottom:10px;display:inline-flex;align-items:center;gap:6px;
   background:color-mix(in oklab, var(--inv-surf) 92%, transparent);
@@ -1364,6 +1400,32 @@ h4.sec{
 .cal-d i.ovr{background:var(--orange)}
 .cal-legend{display:flex;gap:16px;justify-content:center;margin-top:14px;font-size:12px;color:var(--on-surf-var)}
 .cal-legend i{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:6px}
+
+/* ------------------------------------------------- demo treatment picker -- */
+/*  Each option renders the same thumbnail under its own treatment, so the choice
+    is made by looking rather than by reading a description of a filter. */
+.demo-preview{display:flex;gap:10px}
+.demo-opt{
+  flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:7px;
+  padding:10px 6px;border-radius:var(--r-md);background:var(--surf-c-high);
+  box-shadow:inset 0 0 0 2px transparent;
+  transition:background var(--fast),box-shadow var(--fast);
+}
+.demo-opt.on{background:var(--sec-c);box-shadow:inset 0 0 0 2px var(--prim)}
+.demo-opt:active{background:var(--surf-c-highest)}
+.demo-swatch{display:block;line-height:0}
+.demo-swatch .thumb{width:100%;height:56px;border-radius:var(--r-sm);object-fit:contain}
+.demo-lbl{
+  font-size:12px;letter-spacing:.0333em;color:var(--on-surf-var);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;
+}
+.demo-opt.on .demo-lbl{color:var(--on-sec-c)}
+/* The swatch has to preview a treatment that is not the one in force, so each
+   option restates the pair locally instead of inheriting from :root. */
+.demo-opt[data-demo="dim"]   .thumb{background:var(--surf-c-high);filter:brightness(.78) contrast(1.06)}
+.demo-opt[data-demo="invert"].thumb,
+.demo-opt[data-demo="invert"] .thumb{background:var(--surf-c);filter:invert(1) hue-rotate(180deg) brightness(.92)}
+.demo-opt[data-demo="plain"] .thumb{background:#fff;filter:none}
 
 /* -------------------------------------------------------- accent swatches */
 .swatches{display:flex;gap:14px;flex-wrap:wrap}
