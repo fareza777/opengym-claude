@@ -1085,6 +1085,20 @@ h4.sec{
   .setrow.eff3 .stp .num{font-size:13px}
 }
 
+/*  The plate button sits inside the set row's width budget, so it is deliberately
+    narrow: an icon with a finger-sized hit area spilling past its own box rather
+    than a control that costs the weight field two more characters. */
+.setrow .platebtn{
+  width:22px;height:44px;flex:none;border-radius:var(--r-sm);
+  display:flex;align-items:center;justify-content:center;
+  background:none;color:var(--on-surf-var);font-size:17px;position:relative;
+  transition:color var(--fast),background var(--fast);
+}
+.setrow .platebtn::after{content:'';position:absolute;inset:0 -5px}
+.setrow .platebtn:active{background:var(--surf-c-highest);color:var(--prim)}
+.setrow.done .platebtn,.setrow.warm .platebtn{opacity:.5}
+@media (max-width:359px){ .setrow .platebtn{width:18px;font-size:15px} }
+
 /* why the next target is what it is */
 .progline{
   display:flex;align-items:flex-start;gap:8px;margin:8px 0 4px;
@@ -1380,6 +1394,33 @@ h4.sec{
 }
 .steps-list::marker{color:var(--prim);font-weight:500}
 
+/* ------------------------------------------------------ plate calculator -- */
+/*  The stack is drawn rather than listed because loading a bar is a spatial
+    task: you read it left to right, biggest plate inward, and a column of "2 x
+    20 kg" does not help you at the rack. Plate height scales with denomination
+    so the shape itself is recognisable before the numbers are.                 */
+.plate-stack{
+  display:flex;align-items:center;gap:4px;height:150px;
+  padding:0 16px;margin:8px 0 16px;border-radius:var(--r-lg);
+  background:var(--surf-c);overflow-x:auto;
+}
+.plate{
+  flex:none;width:26px;height:var(--h,70%);border-radius:var(--r-xs);
+  background:var(--prim);color:var(--on-prim);
+  display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:500;font-variant-numeric:tabular-nums;
+  writing-mode:vertical-rl;text-orientation:mixed;letter-spacing:.02em;
+}
+/* the sleeve the plates sit on, so the stack reads as a bar and not a bar chart */
+.plate-bar{
+  flex:1;min-width:40px;height:12px;border-radius:0 var(--r-xs) var(--r-xs) 0;
+  background:var(--surf-c-highest);
+}
+.plate-sum{
+  font-size:15px;letter-spacing:.0178em;color:var(--on-surf);
+  font-variant-numeric:tabular-nums;
+}
+
 /* --------------------------------------------------------- month calendar */
 .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-top:12px}
 .cal-h{
@@ -1439,6 +1480,33 @@ h4.sec{
   box-shadow:0 0 0 3px var(--on-surf);
 }
 
+/* --------------------------------------------------------- drag to sort --- */
+/*  Rows translate out of the way rather than a placeholder being inserted, so
+    the list reads as one object rearranging itself instead of re-rendering.
+    --shift is set per row by useDragSort: -1 means "move up one place". */
+.drag-row{
+  transition:transform var(--med) var(--ease-emph);
+  transform:translateY(calc(var(--shift,0) * 100%));
+}
+.drag-row.lifted{
+  transition:none;position:relative;z-index:2;
+}
+.drag-row.lifted .item{
+  background:var(--surf-c-highest);box-shadow:var(--el-3);
+  transform:scale(1.015);
+}
+.draghandle{
+  width:32px;height:44px;margin:-6px -6px -6px -8px;flex:none;
+  display:flex;align-items:center;justify-content:center;
+  color:var(--on-surf-var);font-size:19px;cursor:grab;
+  border-radius:var(--r-sm);
+}
+.draghandle:active{cursor:grabbing;background:var(--surf-c-highest);color:var(--on-surf)}
+/* No drag on a pointer that cannot hover-and-hold reliably? The arrows are still
+   there for everyone; this just keeps the handle out of the way when a reduced
+   motion preference means the shift animation is off anyway. */
+@media (prefers-reduced-motion: reduce){ .drag-row{transition:none} }
+
 /* -------------------------------------------------------------- supersets */
 .ss-label{
   font-size:12px;font-weight:500;letter-spacing:.0333em;text-transform:none;
@@ -1482,12 +1550,19 @@ h4.sec{
     not met yet, and each step needs the whole screen for one question.        */
 .onb{
   min-height:100dvh;display:flex;flex-direction:column;
-  /* Cancels #app's own padding so the flow owns the whole screen — it is not a
-     view inside the app chrome, it runs before there is any. */
-  margin:calc(var(--sat) * -1 - 4px) calc(var(--pad) * -1) calc(-116px - var(--sab));
+  /* Cancels #app's own padding so the flow owns the whole screen — on first run
+     it is not a view inside the app chrome, it runs before there is any. */
+  margin:calc(var(--sat) * -1 - 4px) calc(var(--pad) * -1) calc(-168px - var(--sab));
   padding:calc(var(--sat) + 8px) var(--pad) 0;
   background:var(--surf);
 }
+/*  Reached from Settings instead, the same flow IS a view inside the chrome:
+    the navigation bar is there, so it must not be covered and the flow must not
+    claim the full viewport height. */
+.onb.inline{
+  min-height:auto;margin:0;padding:0;
+}
+.onb.inline .onb-foot{bottom:calc(80px + var(--sab))}
 .onb-top{display:flex;align-items:center;gap:12px;min-height:48px}
 /* progress as segments, not a spinner — five taps is a promise worth showing */
 .onb-prog{flex:1;display:flex;gap:4px;align-items:center}

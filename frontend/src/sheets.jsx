@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { useStore } from './store/useStore.js'
 import { useUI } from './store/useUI.js'
 import { EXDB, EXIDX, BODYPARTS, isCardio, isBodyweightEq, allExercises, equipmentOf } from './lib/exercises.js'
-import { fmtDate, fmtNum, fmtVol, fmtDur, durPart, todayISO, uid, exCount, DAYN, MONTHS_LONG, ACCENTS } from './lib/format.js'
+import { fmtDate, fmtNum, fmtPlate, fmtVol, fmtDur, durPart, todayISO, uid, exCount, DAYN, MONTHS_LONG, ACCENTS } from './lib/format.js'
+import { platesFor, nearestLoadable, PLATES, BARS, DEFAULT_PLATES, defaultBar } from './lib/plates.js'
 import { lastEntryFor, bestWeightFor, buildSets, effectiveRoutineId, workoutVolume, setsDone, setsDoneActive, lastBW, supersetUnits, unitOf, setLabel, defaultConfig, cleanupSg, modeOf, effortOf, isBw, isPerSide, sideReps, restFor, fmtSec } from './lib/history.js'
 import { beep, vibrate } from './lib/sound.js'
 import { t, instrFor, getLang, INSTR_LANGS } from './lib/i18n.js'
@@ -11,7 +12,7 @@ import { starterRoutines } from './lib/starter.js'
 import Media, { Thumb } from './components/Media.jsx'
 import Stepper from './components/Stepper.jsx'
 import Icon from './components/Icon.jsx'
-import { Button, Slider, Switch, Segmented, SelectRow, Row } from './components/ui.jsx'
+import { Button, Slider, Switch, Segmented, SelectRow, Row, TextArea } from './components/ui.jsx'
 import { glyphOf, GLYPH_GROUPS, DEFAULT_GLYPH } from './lib/glyphs.js'
 import BodyMap from './components/BodyMap.jsx'
 import { loadOfWorkouts } from './lib/muscles.js'
@@ -50,6 +51,89 @@ export function loadStarterPlan() {
     st.week[1] = push.id; st.week[3] = pull.id; st.week[5] = legs.id
   })
   toast(t('Starter plan loaded — Mon Push · Wed Pull · Fri Legs'))
+}
+
+/* ============================ plate calculator ============================ */
+// Opened from the weight in a set row. The app already decided the number; this
+// is the step it used to leave to you — which plates, per side, and whether the
+// number is even loadable with what your gym owns.
+function PlateSheet({ weight, close }) {
+  const st = useStore(s => s.S)
+  const update = useStore(s => s.update)
+  const unit = st.unit || 'kg'
+  const bar = st.bar?.[unit] ?? defaultBar(unit)
+  const owned = st.plates?.[unit] || DEFAULT_PLATES[unit]
+  const [edit, setEdit] = useState(false)
+
+  const r = platesFor(weight, bar, owned)
+  const near = r.exact ? null : nearestLoadable(weight, bar, owned)
+
+  const setBar = w => update(s => { s.bar = { ...(s.bar || {}), [unit]: w } })
+  const togglePlate = p => update(s => {
+    const cur = s.plates?.[unit] || DEFAULT_PLATES[unit]
+    const next = cur.includes(p) ? cur.filter(x => x !== p) : [...cur, p].sort((a, b) => b - a)
+    s.plates = { ...(s.plates || {}), [unit]: next }
+  })
+
+  return <>
+    <h3>{fmtNum(weight)} {unit}</h3>
+    {r.perSide.length > 0 && <div className="plate-stack">
+      {r.perSide.flatMap(({ plate, count }) =>
+        Array.from({ length: count }, (_, i) => (
+          <span key={plate + '-' + i} className="plate" style={{ '--h': Math.min(100, 42 + plate * 2.3) + '%' }}>
+            {fmtPlate(plate)}
+          </span>
+        )))}
+      <span className="plate-bar" />
+    </div>}
+
+    <div className="plate-sum">
+      {r.perSide.length
+        ? t('Per side: {0}', r.perSide.map(p => `${p.count} × ${fmtPlate(p.plate)}`).join(' + '))
+        : t('Just the bar.')}
+    </div>
+
+    {!r.exact && near && <div className="progline warn" style={{ marginTop: 12 }}>
+      <Icon name="info" />
+      <span>{near.below && near.above
+        ? t('{0} {1} is not loadable with your plates — the nearest are {2} and {3}.', fmtNum(weight), unit, fmtNum(near.below) + ' ' + unit, fmtNum(near.above) + ' ' + unit)
+        : t('{0} {1} is not loadable with your plates — closest is {2}.', fmtNum(weight), unit, fmtNum(r.loaded) + ' ' + unit)}</span>
+    </div>}
+
+    <div className="row between" style={{ marginTop: 18, marginBottom: 8 }}>
+      <h4 className="sec" style={{ margin: 0 }}>{t('Your gym')}</h4>
+      <Button size="sm" icon={edit ? 'check' : 'wrench'} onClick={() => setEdit(e => !e)}>
+        {edit ? t('Done') : t('Edit')}
+      </Button>
+    </div>
+
+    {edit ? <>
+      <div className="sect-b" style={{ marginBottom: 10 }}>
+        <SelectRow icon="barbell" title={t('Bar')} sheetTitle={t('Bar')} value={String(bar)}
+          onChange={v => setBar(+v)}
+          options={BARS[unit].map(b => ({ value: String(b.w), label: `${t(b.label)}${b.w ? ' · ' + fmtNum(b.w) + ' ' + unit : ''}` }))} />
+      </div>
+      <div className="small dim" style={{ marginBottom: 8 }}>{t('Tap the plates your gym has.')}</div>
+      <div className="chips" style={{ flexWrap: 'wrap', overflow: 'visible' }}>
+        {PLATES[unit].map(p => (
+          <button key={p} className={'chip' + (owned.includes(p) ? ' on' : '')} onClick={() => togglePlate(p)}>
+            {fmtPlate(p)}
+          </button>
+        ))}
+      </div>
+    </> : (
+      <div className="small dim">
+        {t('{0} · plates: {1}', BARS[unit].find(b => b.w === bar)?.label ? t(BARS[unit].find(b => b.w === bar).label) : fmtNum(bar) + ' ' + unit,
+           owned.slice().sort((a, b) => b - a).map(fmtPlate).join(', '))}
+      </div>
+    )}
+    <div style={{ height: 14 }} />
+    <Button variant="primary" onClick={close}>{t('Done')}</Button>
+  </>
+}
+
+export function plateSheet(weight) {
+  ui().openSheet(close => <PlateSheet weight={weight} close={close} />)
 }
 
 /* ============================ weight picker (shared: body weight + goal) ============================ */
@@ -775,9 +859,16 @@ export const dayAssignSheet = day => ui().openSheet(close => <DayAssign day={day
 /* ============================ workout detail ============================ */
 function WorkoutDetail({ w, close }) {
   const st = useStore(s => s.S)
+  // Read the note from the live state, not from the `w` the caller captured, so
+  // an edit made here shows up without reopening the sheet.
+  const live = st.workouts.find(x => x.id === w.id) || w
+  const [editNote, setEditNote] = useState(false)
   return <>
     <h3>{w.name}</h3>
     <div className="muted small" style={{ marginBottom: 12 }}>{[fmtDate(w.d, true), ...durPart(w.end - w.start), fmtVol(w.vol, st.unit), ...(w.bw ? [fmtNum(w.bw) + ' ' + st.unit] : [])].join(' · ')}</div>
+    {live.note && !editNote && (
+      <div className="exnote" onClick={() => setEditNote(true)} style={{ cursor: 'pointer' }}>{live.note}</div>
+    )}
     {w.entries.map((e, i) => {
       const ex = EXIDX[e.id]
       return <div key={i} className="row" style={{ marginBottom: 12, alignItems: 'flex-start' }}>
@@ -786,6 +877,15 @@ function WorkoutDetail({ w, close }) {
           <div className="ss">{e.sets.filter(s => s.done && !s.warm).map(s => setLabel(e.id, s, e.target)).join('  ·  ') || t('no sets')}</div></div>
       </div>
     })}
+    {(editNote || !live.note) && (
+      <div style={{ marginBottom: 12 }}>
+        <WorkoutNote value={live.note} onChange={v => update(x => {
+          const saved = x.workouts.find(k => k.id === w.id)
+          if (!saved) return
+          if (v.trim()) saved.note = v.trim().slice(0, 500); else delete saved.note
+        }, true)} />
+      </div>
+    )}
     <Button variant="danger" onClick={() => confirmSheet({ title: t('Delete workout?'), message: t('This removes it from your history for good.'), confirmText: t('Delete'), danger: true, onConfirm: () => { update(s => { s.workouts = s.workouts.filter(x => x.id !== w.id) }); close(); toast(t('Workout deleted')) } })}>{t('Delete workout')}</Button>
   </>
 }
@@ -841,6 +941,9 @@ export function WorkoutRow({ w, onClick }) {
     <span className="lrow-i" style={{ width: 34, height: 34, borderRadius: 8, fontSize: 19 }}><Icon name={glyph} /></span>
     <div className="grow"><div className="tt">{w.name}</div>
       <div className="ss">{[fmtDate(w.d, true), ...durPart(w.end - w.start), t('{0} sets', setsDone(w)), fmtVol(w.vol, st.unit)].join(' · ')}</div></div>
+    {/* a note is worth knowing about from the list — it is the reason to open
+        one workout rather than another */}
+    {w.note && <Icon name="clipboard" className="chev" style={{ fontSize: 17, opacity: .7 }} aria-label={t('Has a note')} />}
     {w.prs && w.prs.length > 0 && <span className="pr"><Icon name="trophy" />{w.prs.length} PR</span>}
     <Icon name="chevronRight" className="chev" />
   </div>
@@ -929,6 +1032,19 @@ function WorkoutComplete({ close }) {
 }
 export const workoutCompleteSheet = () => ui().openSheet(close => <WorkoutComplete close={close} />, { kind: 'center' })
 
+// A note on the session. "Left knee twinge", "used a belt", "bar felt heavy" —
+// the context that makes a log worth re-reading a year later, and the one thing
+// a page of numbers cannot record. Asked for at the end, when it is fresh and
+// when nobody is mid-set.
+function WorkoutNote({ id, value, onChange }) {
+  const [v, setV] = useState(value || '')
+  return <>
+    <h4 className="sec">{t('Note (optional)')}</h4>
+    <TextArea rows={2} maxLength={500} placeholder={t('How did it feel? Anything worth remembering.')}
+      value={v} onChange={e => { setV(e.target.value); onChange(e.target.value) }} />
+  </>
+}
+
 function FinishSummary({ w, prs, e1prs = [], close }) {
   const st = useStore(s => s.S)
   return <div style={{ textAlign: 'center', padding: '8px 0' }}>
@@ -944,6 +1060,15 @@ function FinishSummary({ w, prs, e1prs = [], close }) {
       {prs.map(id => <div key={id} className="small accent capitalize row" style={{ gap: 5 }}><Icon name="trophy" style={{ fontSize: 13 }} />{t('New PR:')} {(EXIDX[id] || {}).n || id}</div>)}
       {e1prs.map(p => <div key={p.id} className="small accent capitalize row" style={{ gap: 5 }}><Icon name="chartLine" style={{ fontSize: 13 }} />{t('Best estimated 1RM:')} {(EXIDX[p.id] || {}).n || p.id} · {fmtNum(p.est)} {st.unit}</div>)}
     </div>}
+    <div style={{ textAlign: 'left' }}>
+      <WorkoutNote value={w.note} onChange={v => update(x => {
+        const saved = x.workouts.find(k => k.id === w.id)
+        // Empty stays absent rather than becoming "", so a workout only carries
+        // what was actually written on it.
+        if (!saved) return
+        if (v.trim()) saved.note = v.trim().slice(0, 500); else delete saved.note
+      }, true)} />
+    </div>
     <h4 className="sec" style={{ textAlign: 'left' }}>{t('What you just trained')}</h4>
     <BodyMap load={loadOfWorkouts([w])} body={st.body} />
     <div style={{ height: 14 }} />

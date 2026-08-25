@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useStore } from '../store/useStore.js'
 import { EXIDX } from '../lib/exercises.js'
@@ -24,19 +24,26 @@ function MuscleBalance({ S }) {
   const [win, setWin] = useState(7)
   const [hard, setHard] = useState(false)
   const [sel, setSel] = useState(null)
-  const now = Date.now()
-  const inWin = S.workouts.filter(w =>
-    win === 0 ? true
-      : win === 7 ? weekKey(w.d) === weekKey(todayISO())
-        : (w.start || new Date(w.d).getTime()) > now - win * 86400000)
+  // Everything below walks the whole history. Without memoisation it ran again on
+  // every render of this screen — including renders caused by something entirely
+  // unrelated, like the rest timer ticking once a second.
+  const inWin = useMemo(() => {
+    const now = Date.now()
+    return S.workouts.filter(w =>
+      win === 0 ? true
+        : win === 7 ? weekKey(w.d) === weekKey(todayISO())
+          : (w.start || new Date(w.d).getTime()) > now - win * 86400000)
+  }, [S.workouts, win])
   // Counting only the sets taken near failure turns the map from "where did the volume go"
   // into "where did the stimulus go" — a muscle can lead on sets and still never be trained
   // hard. Offered only when the window holds ratings at all, since with none the hard map
   // would just be empty and read as "you trained nothing".
-  const rated = inWin.some(w => w.entries.some(e => e.sets.some(s => s.done && !s.warm && isHardSet(s))))
+  const rated = useMemo(
+    () => inWin.some(w => w.entries.some(e => e.sets.some(s => s.done && !s.warm && isHardSet(s)))),
+    [inWin])
   const on = hard && rated
-  const load = loadOfWorkouts(inWin, on ? isHardSet : null)
-  const { worked, missed } = rankOf(load)
+  const load = useMemo(() => loadOfWorkouts(inWin, on ? isHardSet : null), [inWin, on])
+  const { worked, missed } = useMemo(() => rankOf(load), [load])
   const top = worked.slice(0, 4)
   const max = worked.length ? load[worked[0]] : 0
   const sets = m => Math.round((load[m] || 0) * 10) / 10
@@ -83,9 +90,9 @@ function EffortCard({ S }) {
   const [win, setWin] = useState(90)
   const kind = displayScale(S)
   const hd = scaleName(kind)
-  const sum = effortSummary(S, win)
-  const weeks = effortWeeks(S, win)
-  const hist = effortHistogram(S, win)
+  const { sum, weeks, hist } = useMemo(() => ({
+    sum: effortSummary(S, win), weeks: effortWeeks(S, win), hist: effortHistogram(S, win),
+  }), [S.workouts, win])
   const maxBin = Math.max(1, ...hist.map(b => b.n))
   // The week's set count rides along in the tooltip, because the pair is the reading:
   // volume up with effort up is fatigue piling up, volume up with effort flat is adaptation.
@@ -136,60 +143,79 @@ export default function Stats() {
   const [range, setRange] = useState(90)
   const [exId, setExId] = useState(null)
   const [exMetric, setExMetric] = useState('top')
-  const now = Date.now()
-  const anyEffort = hasEffort(S)
+  const anyEffort = useMemo(() => hasEffort(S), [S.workouts])
   const kind = displayScale(S)
   const hd = scaleName(kind)
 
-  const bwPts = S.bodyweight.filter(b => range === 0 || (b.t || new Date(b.d).getTime()) > now - range * 86400000)
-    .map(b => ({ t: b.t || new Date(b.d).getTime(), y: b.w, d: b.d }))
-  const bw30 = S.bodyweight.filter(b => (b.t || new Date(b.d).getTime()) > now - 30 * 86400000)
-  const bwDelta30 = bw30.length > 1 ? bw30[bw30.length - 1].w - bw30[0].w : null
-  const monthW = S.workouts.filter(w => w.d.slice(0, 7) === todayISO().slice(0, 7)).length
+  const bwPts = useMemo(() => {
+    const now = Date.now()
+    return S.bodyweight.filter(b => range === 0 || (b.t || new Date(b.d).getTime()) > now - range * 86400000)
+      .map(b => ({ t: b.t || new Date(b.d).getTime(), y: b.w, d: b.d }))
+  }, [S.bodyweight, range])
+  const bwDelta30 = useMemo(() => {
+    const now = Date.now()
+    const bw30 = S.bodyweight.filter(b => (b.t || new Date(b.d).getTime()) > now - 30 * 86400000)
+    return bw30.length > 1 ? bw30[bw30.length - 1].w - bw30[0].w : null
+  }, [S.bodyweight])
+  const monthW = useMemo(
+    () => S.workouts.filter(w => w.d.slice(0, 7) === todayISO().slice(0, 7)).length, [S.workouts])
 
-  const exHist = [...new Set(S.workouts.flatMap(w => w.entries.map(e => e.id)))].filter(id => EXIDX[id]).sort((a, b) => EXIDX[a].n < EXIDX[b].n ? -1 : 1)
+  const exHist = useMemo(
+    () => [...new Set(S.workouts.flatMap(w => w.entries.map(e => e.id)))]
+      .filter(id => EXIDX[id]).sort((a, b) => EXIDX[a].n < EXIDX[b].n ? -1 : 1),
+    [S.workouts])
   const curEx = exId && exHist.includes(exId) ? exId : exHist[0] || null
   // How this exercise was logged most recently decides what the curve means: top weight,
   // longest hold or top speed. Sets logged in another mode lack the field and score 0, so a
   // switched exercise drops its old points instead of mixing seconds into a weight chart.
-  const curMode = curEx ? (() => {
+  const curMode = useMemo(() => (curEx ? (() => {
     for (let i = S.workouts.length - 1; i >= 0; i--) {
       const en = S.workouts[i].entries.find(e => e.id === curEx)
       if (en) return modeOf({ ...(en.target || {}), id: curEx })
     }
     return modeOf({ id: curEx })
-  })() : 'reps'
+  })() : 'reps'), [S.workouts, curEx])
   const curCardio = curMode === 'cardio'
   const curTimed = curMode === 'time'
   const metric = s => curCardio ? (s.speed || 0) : curTimed ? (s.sec || 0) : (s.w || 0)
   const exUnit = curCardio ? 'km/h' : curTimed ? 's' : S.unit
-  let exPts = [], exList = [], exBest = 0
-  if (curEx) {
-    S.workouts.forEach(w => {
-      const en = w.entries.find(e => e.id === curEx)
-      if (en) { const work = en.sets.filter(s => s.done && !s.warm); const mx = Math.max(0, ...work.map(metric), curCardio || curTimed ? 0 : (en.topW || 0)); if (mx > 0) { exPts.push({ t: w.start, y: mx, d: w.d, sets: work, target: en.target }); if (mx > exBest) exBest = mx } }
-    })
-    exList = exPts.slice(-5).reverse()
-  }
+  const { exPts, exList, exBest } = useMemo(() => {
+    const pts = []
+    let best = 0
+    if (curEx) {
+      S.workouts.forEach(w => {
+        const en = w.entries.find(e => e.id === curEx)
+        if (!en) return
+        const work = en.sets.filter(s => s.done && !s.warm)
+        const mx = Math.max(0, ...work.map(metric), curCardio || curTimed ? 0 : (en.topW || 0))
+        if (mx > 0) { pts.push({ t: w.start, y: mx, d: w.d, sets: work, target: en.target }); if (mx > best) best = mx }
+      })
+    }
+    return { exPts: pts, exList: pts.slice(-5).reverse(), exBest: best }
+  }, [S.workouts, curEx, curCardio, curTimed])
   // Estimated 1RM (issue #18) — only reps-mode training produces one, so cardio and timed
   // work simply have no points and the toggle stays hidden.
-  const e1Pts = curEx ? e1rmSeries(S, curEx) : []
-  const e1Best = curEx ? best1RM(S, curEx) : null
+  const e1Pts = useMemo(() => (curEx ? e1rmSeries(S, curEx) : []), [S.workouts, curEx])
+  const e1Best = useMemo(() => (curEx ? best1RM(S, curEx) : null), [S.workouts, curEx])
   const showE1 = e1Pts.length > 0
   // Effort on this exercise, per session. It rides on the top-set curve as well as having a
   // curve of its own, because the two only mean something together: the same weight moved
   // with more left in the tank is progress a weight-only chart draws as a flat line.
-  const exRir = exPts.map(p => avgRir(p.sets))
+  // These all derive from exPts, so they only need recomputing when it or the
+  // display scale changes — not on every tick of whatever else is on screen.
+  const exRir = useMemo(() => exPts.map(p => avgRir(p.sets)), [exPts])
   const showEff = exRir.filter(v => v != null).length >= 3
-  const effPts = exPts.map((p, i) => (exRir[i] == null ? null : { t: p.t, y: toScale(kind, exRir[i]), d: p.d })).filter(Boolean)
+  const effPts = useMemo(
+    () => exPts.map((p, i) => (exRir[i] == null ? null : { t: p.t, y: toScale(kind, exRir[i]), d: p.d })).filter(Boolean),
+    [exPts, exRir, kind])
   const onE1 = showE1 && exMetric === 'e1rm'
   const onEff = showEff && exMetric === 'effort'
-  const topPts = exPts.map((p, i) => ({
+  const topPts = useMemo(() => exPts.map((p, i) => ({
     t: p.t, y: p.y, d: p.d,
     // 0 RIR (nothing left) is a full dot, 4+ a faint one; unrated sessions keep the plain line.
     m: exRir[i] == null ? null : 1 - Math.min(4, Math.max(0, exRir[i])) / 4,
     note: exRir[i] == null ? undefined : hd + ' ' + fmtNum(toScale(kind, exRir[i]))
-  }))
+  })), [exPts, exRir, kind, hd])
   const exOpts = [{ value: 'top', label: t('Top set') }]
   if (showE1) exOpts.push({ value: 'e1rm', label: t('Est. 1RM') })
   if (showEff) exOpts.push({ value: 'effort', label: t('Effort') })

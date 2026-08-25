@@ -2,10 +2,10 @@ import { useState } from 'react'
 import { useStore } from '../store/useStore.js'
 import { buildPlan, describePlan } from '../lib/planner.js'
 import { POLICY_NAME } from '../lib/progression.js'
-import { DAYN } from '../lib/format.js'
+import { DAYN, todayISO } from '../lib/format.js'
 import { t } from '../lib/i18n.js'
 import Icon from '../components/Icon.jsx'
-import { Button, Segmented } from '../components/ui.jsx'
+import { Button, Segmented, Stepper } from '../components/ui.jsx'
 import { glyphOf } from '../lib/glyphs.js'
 
 // First run.
@@ -51,16 +51,35 @@ function Choice({ icon, title, sub, on, onClick }) {
   )
 }
 
-export default function Onboarding({ onDone }) {
+/**
+ * The first-run flow, and — with `rebuild` — the same four questions reached
+ * from Settings later on.
+ *
+ * It was gated on first run only, which meant the strongest thing in the app was
+ * available for about ninety seconds of a user's lifetime. Skip it, or move from
+ * a home setup to a gym six months later, and there was no way back to it.
+ *
+ * In rebuild mode the welcome screen is dropped (they have met the app), the
+ * plan is APPENDED rather than replacing what exists, and the weekly schedule is
+ * only touched on the days the new plan fills — nobody should lose routines
+ * they built by hand because they wanted a second opinion.
+ */
+export default function Onboarding({ onDone, rebuild = false }) {
   const update = useStore(s => s.update)
-  const [step, setStep] = useState(0)
+  const [step, setStep] = useState(rebuild ? 1 : 0)
   const [goal, setGoal] = useState('muscle')
   const [days, setDays] = useState(3)
   const [equipment, setEquipment] = useState('gym')
   const [unit, setUnit] = useState('kg')
+  // The flow already sets units; asking for the weight in the same breath is the
+  // natural moment, and skipping it left the body-weight chart empty for people
+  // who never went looking for the Log button. Optional — 0 means "not now",
+  // and the pre-workout weigh-in will ask again anyway.
+  const [bw, setBw] = useState(0)
 
   const STEPS = 5
-  const back = () => setStep(s => Math.max(0, s - 1))
+  const FIRST = rebuild ? 1 : 0          // the welcome screen is first-run only
+  const back = () => { if (step === FIRST) onDone(false); else setStep(s => Math.max(FIRST, s - 1)) }
   const next = () => setStep(s => Math.min(STEPS - 1, s + 1))
 
   // Writing the plan is the only mutation this whole flow performs, and it
@@ -68,15 +87,26 @@ export default function Onboarding({ onDone }) {
   const commit = start => {
     const { routines, week } = buildPlan({ goal, days, equipment })
     update(s => {
-      s.routines = routines
-      s.week = week
-      s.unit = unit
+      if (bw > 0 && !rebuild && !(s.bodyweight || []).length) {
+        s.bodyweight = [{ d: todayISO(), t: Date.now(), w: bw }]
+      }
+      if (rebuild) {
+        // Append. Someone asking for a plan is not asking to lose the one they
+        // have, and the routines they wrote themselves are the ones they care
+        // about most.
+        s.routines = [...s.routines, ...routines]
+        s.week = { ...s.week, ...week }
+      } else {
+        s.routines = routines
+        s.week = week
+        s.unit = unit
+      }
       s.onboarded = true
     })
     onDone(start)
   }
   const skip = () => {
-    update(s => { s.onboarded = true })
+    if (!rebuild) update(s => { s.onboarded = true })
     onDone(false)
   }
 
@@ -89,15 +119,15 @@ export default function Onboarding({ onDone }) {
   const nextDay = plan.days.find(d => d > new Date().getDay()) ?? plan.days[0]
 
   return (
-    <div className="onb">
+    <div className={'onb' + (rebuild ? ' inline' : '')}>
       <div className="onb-top">
-        {step > 0
+        {step > FIRST || rebuild
           ? <button className="iconbtn" onClick={back} aria-label={t('Back')}><Icon name="chevronLeft" /></button>
           : <span style={{ width: 40 }} />}
         <div className="onb-prog" role="progressbar" aria-valuenow={step + 1} aria-valuemin={1} aria-valuemax={STEPS}>
           {Array.from({ length: STEPS }, (_, i) => <i key={i} className={i <= step ? 'on' : ''} />)}
         </div>
-        {step === 0
+        {step === 0 && !rebuild
           ? <button className="btn ghost xs" onClick={skip}>{t('Skip')}</button>
           : <span style={{ width: 40 }} />}
       </div>
@@ -148,6 +178,16 @@ export default function Onboarding({ onDone }) {
           <h4 className="sec">{t('Units')}</h4>
           <Segmented value={unit} onChange={setUnit}
             options={[{ value: 'kg', label: 'kg' }, { value: 'lb', label: 'lb' }]} />
+          {!rebuild && <>
+            <h4 className="sec">{t('Body weight (optional)')}</h4>
+            <Stepper value={bw} step={unit === 'lb' ? 1 : 0.5} unit={unit}
+              onChange={v => setBw(Math.max(0, v))} />
+            <div className="small dim" style={{ marginTop: 8 }}>
+              {bw > 0
+                ? t('Starts your weight chart today. You can change it any time.')
+                : t('Leave it at zero to skip — you are asked before every workout anyway.')}
+            </div>
+          </>}
         </>}
 
         {step === 4 && <>
@@ -156,7 +196,8 @@ export default function Onboarding({ onDone }) {
           {/* "progressing by Double progression" said the word twice; the policy
               names already read as a rule, so the sentence just names it. */}
           <p className="onb-p">{t('{0} routines across {1} days, using {2}.',
-            plan.routineCount, plan.dayCount, t(POLICY_NAME[plan.policy]))}</p>
+            plan.routineCount, plan.dayCount, t(POLICY_NAME[plan.policy]))}
+            {rebuild ? ' ' + t('These are added to your plan — nothing you already have is removed.') : ''}</p>
           <div className="onb-week">
             {plan.days.map((d, i) => (
               <div key={d} className="onb-wr">

@@ -30,6 +30,10 @@ export const DEF = {
   // 'invert' (genuinely dark, suits most of these flat illustrations) or 'plain'
   // (the source untouched). Light mode always uses the source.
   demo: 'dim',
+  // The gym's kit, per unit, for the plate calculator. Absent until someone
+  // edits it, at which point lib/plates.js defaults take over — most people
+  // train at one gym and will set this once, if ever.
+  bar: null, plates: null,
   // Set once the first-run flow has been seen (or skipped). Absent on every
   // profile written before it existed, which is why App.jsx also checks whether
   // the profile has any data — an upgrading user must never be sent back to a
@@ -70,15 +74,23 @@ export const useStore = create((set, get) => {
   // the session early — backgrounding, navigating away, closing — flushes it, so
   // the durability guarantee is unchanged; only the timing moved.
   let writeTm = null
+  const writeNow = () => {
+    try { localStorage.setItem(KEY, JSON.stringify(get().S)) } catch (e) { /* quota — keep going */ }
+  }
+  // flushWrite() only exists to bring a PENDING write forward, so it guards on
+  // there being one. writeNow() is the write itself and guards on nothing —
+  // folding the two together meant the timer cleared writeTm, then called a
+  // function that returned immediately because writeTm was null, and nothing was
+  // ever persisted at all.
   const flushWrite = () => {
     if (!writeTm) return
     clearTimeout(writeTm)
     writeTm = null
-    try { localStorage.setItem(KEY, JSON.stringify(get().S)) } catch (e) { /* quota — keep going */ }
+    writeNow()
   }
   const scheduleWrite = () => {
     if (writeTm) return
-    writeTm = setTimeout(() => { writeTm = null; flushWrite() }, 400)
+    writeTm = setTimeout(() => { writeTm = null; writeNow() }, 400)
   }
 
   const persist = (S, push = true) => {

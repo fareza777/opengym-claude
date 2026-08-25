@@ -786,6 +786,44 @@ export default {
   'Take me to the app': 'Bawa aku ke aplikasinya',
   'Today is a rest day — your first session is {0}.':
     'Hari ini hari istirahat — sesi pertamamu hari {0}.',
+  // --- onboarding body weight ---
+  'Body weight (optional)': 'Berat badan (opsional)',
+  'Starts your weight chart today. You can change it any time.':
+    'Grafik beratmu mulai hari ini. Bisa diubah kapan saja.',
+  'Leave it at zero to skip — you are asked before every workout anyway.':
+    'Biarkan nol untuk melewati — nanti tetap ditanyakan sebelum tiap latihan.',
+  // --- drag to reorder ---
+  'Drag to reorder': 'Seret untuk mengurutkan',
+  'Drag the handle to reorder, or use the arrows.':
+    'Seret pegangannya untuk mengurutkan, atau pakai panah.',
+  // --- workout notes ---
+  'Note (optional)': 'Catatan (opsional)',
+  'How did it feel? Anything worth remembering.':
+    'Gimana rasanya? Apa pun yang layak diingat.',
+  'Has a note': 'Ada catatan',
+  // --- rebuild plan ---
+  'Build me a plan': 'Buatkan aku rencana',
+  'Four questions — goal, days, equipment. Added to your plan, nothing removed.':
+    'Empat pertanyaan — tujuan, hari, alat. Ditambahkan ke rencanamu, tidak ada yang dihapus.',
+  'These are added to your plan — nothing you already have is removed.':
+    'Ini ditambahkan ke rencanamu — yang sudah ada tidak dihapus.',
+  // --- plate calculator ---
+  'Plates': 'Piringan',
+  'Per side: {0}': 'Per sisi: {0}',
+  'Just the bar.': 'Cuma barnya saja.',
+  'Your gym': 'Gym kamu',
+  'Bar': 'Bar',
+  'Tap the plates your gym has.': 'Ketuk piringan yang ada di gym kamu.',
+  '{0} · plates: {1}': '{0} · piringan: {1}',
+  '{0} {1} is not loadable with your plates — the nearest are {2} and {3}.':
+    '{0} {1} tidak bisa disusun dengan piringanmu — yang terdekat {2} dan {3}.',
+  '{0} {1} is not loadable with your plates — closest is {2}.':
+    '{0} {1} tidak bisa disusun dengan piringanmu — paling dekat {2}.',
+  'Olympic bar': 'Bar olimpik',
+  "Women's bar": 'Bar wanita',
+  'Training bar': 'Bar latihan',
+  'EZ bar': 'Bar EZ',
+  'No bar': 'Tanpa bar',
   // --- exercise demos ---
   'Exercise demos': 'Tampilan animasi gerakan',
   'Dimmed': 'Diredupkan',

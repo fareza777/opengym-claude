@@ -115,6 +115,13 @@ function Shell() {
             <Routes>
               <Route path="/home" element={<Home />} />
               <Route path="/plan" element={<Plan />} />
+              {/* the onboarding generator, reachable for the life of the app */}
+              <Route path="/plan/new" element={<Onboarding rebuild onDone={start => {
+                const S2 = useStore.getState().S
+                const r = start && effectiveRoutine(S2, todayISO())
+                if (r && r.ex.length) startFlow(r.id)
+                else navigate('/plan')
+              }} />} />
               <Route path="/plan/r/:id" element={<RoutineEdit />} />
               <Route path="/workout" element={<Workout />} />
               <Route path="/stats" element={<Stats />} />

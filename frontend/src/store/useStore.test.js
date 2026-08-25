@@ -34,6 +34,29 @@ beforeEach(() => {
   })
 })
 
+describe('persistence', () => {
+  it('actually writes to localStorage', async () => {
+    // The debounced write had a guard bug that made it a no-op: the timer cleared
+    // the pending handle, then called a flush that returned early because the
+    // handle was null. Everything looked fine until you restarted the app and
+    // found the session gone. Worth a test that just checks the bytes land.
+    store.delete('gym_state_v1')
+    useStore.getState().update(s => { s.unit = 'lb' })
+    await new Promise(r => setTimeout(r, 600))
+    const raw = store.get('gym_state_v1')
+    expect(raw, 'nothing was written').toBeTruthy()
+    expect(JSON.parse(raw).unit).toBe('lb')
+  })
+
+  it('coalesces a burst of mutations into one write', async () => {
+    store.delete('gym_state_v1')
+    for (let i = 0; i < 10; i++) useStore.getState().update(s => { s.restSec = 60 + i })
+    await new Promise(r => setTimeout(r, 600))
+    // last value wins, and it got there
+    expect(JSON.parse(store.get('gym_state_v1')).restSec).toBe(69)
+  })
+})
+
 describe('update() structural sharing', () => {
   it('does not copy the workout history when only the active session changed', () => {
     const before = useStore.getState().S

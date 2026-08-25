@@ -5,6 +5,7 @@ import { exOr } from '../lib/exercises.js'
 import { uid } from '../lib/format.js'
 import { t } from '../lib/i18n.js'
 import { supersetUnits, cleanupSg, exLine, fmtSec, DEFAULT_REST } from '../lib/history.js'
+import { useDragSort } from '../lib/dragsort.js'
 import { Thumb } from '../components/Media.jsx'
 import { glyphPicker, exercisePicker, exConfigSheet, confirmSheet } from '../sheets.jsx'
 import Icon from '../components/Icon.jsx'
@@ -25,6 +26,13 @@ export default function RoutineEdit() {
 
   const edit = fn => update(s => { fn(s.routines.find(x => x.id === id).ex) })
   const move = (i, dir) => edit(ex => { const j = i + dir; if (j < 0 || j >= ex.length) return;[ex[i], ex[j]] = [ex[j], ex[i]]; cleanupSg(ex) })
+  // Drag is the gesture; the arrows stay as the keyboard and accessibility path.
+  const moveTo = (from, to) => edit(ex => {
+    const [item] = ex.splice(from, 1)
+    ex.splice(to, 0, item)
+    cleanupSg(ex)
+  })
+  const drag = useDragSort(r.ex.length, moveTo)
   const toggleLink = i => edit(ex => {
     if (i < 1) return
     const cur = ex[i], prev = ex[i - 1]
@@ -64,16 +72,23 @@ export default function RoutineEdit() {
           ...[45, 60, 90, 120, 150, 180, 240, 300].map(v => ({ value: String(v), label: fmtSec(v) }))]} />
     </div>
 
-    {r.ex.length ? <div className="list">{r.ex.map((e, i) => {
+    {r.ex.length ? <div className="list" data-dragsort>{r.ex.map((e, i) => {
       // An unresolvable id is shown rather than skipped — hiding it left an entry you
       // could neither see nor delete, but that still turned up in the workout.
       const ex = exOr(e.id)
       const linkedPrev = i > 0 && e.sg && r.ex[i - 1].sg === e.sg
-      return <div key={i}>
+      return <div key={i} {...drag.rowProps(i)}>
         {unitFirst.has(i) && <div className="ss-label"><Icon name="link" />{t('Superset')}</div>}
         <div className={'item' + (inSS.has(i) ? ' in-ss' : '')} onClick={() => {
           exConfigSheet(ex, e, cfg => edit(x => { x[i] = { id: x[i].id, sg: x[i].sg, ...cfg } }), () => edit(x => { x.splice(i, 1); cleanupSg(x) }), r)
         }}>
+          {/* The handle is deliberately a separate target from the row: the row
+              opens the exercise, and a drag that started as a tap on the artwork
+              would make that unreliable. */}
+          <span className="draghandle" aria-label={t('Drag to reorder')} title={t('Drag to reorder')}
+            onClick={ev => ev.stopPropagation()} {...drag.handleProps(i)}>
+            <Icon name="list" />
+          </span>
           <Thumb ex={ex} />
           <div className="grow"><div className="tt capitalize">{ex.n}</div><div className="ss">{exLine(e, S.unit)}</div></div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2, flex: 'none', alignItems: 'center' }}>
@@ -102,6 +117,7 @@ export default function RoutineEdit() {
     })()}
 
     <div className="small dim row" style={{ margin: '10px 2px', gap: 5 }}><Icon name="link" style={{ fontSize: 13 }} />{t('Tap the link button on an exercise to superset it with the one above — you’ll do them back-to-back.')}</div>
+    <div className="small dim row" style={{ margin: '0 2px 10px', gap: 5 }}><Icon name="list" style={{ fontSize: 13 }} />{t('Drag the handle to reorder, or use the arrows.')}</div>
     <Button variant="primary" onClick={() => exercisePicker(ex => exConfigSheet(ex, null, cfg => edit(x => { x.push({ id: ex.id, ...cfg }) }), null, r))} icon="plus">{t('Add exercise')}</Button>
     <div style={{ height: 10 }} />
     <Button variant="danger" onClick={() => confirmSheet({

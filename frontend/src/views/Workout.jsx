@@ -9,7 +9,7 @@ import { beep, vibrate } from '../lib/sound.js'
 import { t } from '../lib/i18n.js'
 import { api } from '../lib/api.js'
 import Media from '../components/Media.jsx'
-import { startFlow, exercisePicker, exConfigSheet, exerciseDetailSheet, topWeightSheet, finishWorkout, workoutCompleteSheet, confirmSheet } from '../sheets.jsx'
+import { startFlow, exercisePicker, exConfigSheet, exerciseDetailSheet, topWeightSheet, finishWorkout, workoutCompleteSheet, confirmSheet, plateSheet } from '../sheets.jsx'
 import Icon from '../components/Icon.jsx'
 import { Button, Check, NumberField } from '../components/ui.jsx'
 import { nextPrescription, applyPrescription } from '../lib/progression.js'
@@ -108,6 +108,13 @@ function ExerciseBlock({ entryIdx, compact, onToggle, onField, onAddSet, onRemov
       <button aria-label="Increase" onClick={() => bump(s, i, col, 1)}><Icon name="plus" /></button>
     </div>
   )
+  // A loaded weight gets a plate button: the app picked the number, this is the
+  // step that used to be left to the lifter. Only where there is a bar to load —
+  // reps, seconds, speed and bodyweight have no plates.
+  const plateBtn = (s, col) => (col.f === 'w' && !bw && s.w > 0
+    ? <button className="platebtn" aria-label={t('Plates')} title={t('Plates')}
+        onClick={() => plateSheet(s.w)}><Icon name="plate" /></button>
+    : null)
   return <>
     <Media ex={ex} key={entry.id} compact={compact} minimizable />
     <div className="row between" style={{ marginBottom: 6 }}>
@@ -143,7 +150,9 @@ function ExerciseBlock({ entryIdx, compact, onToggle, onField, onAddSet, onRemov
           {s.warm ? t('W') : i + 1}
         </button>
         {cell(s, i, col1, 'w')}
+        {plateBtn(s, col1)}
         {col2 && cell(s, i, col2, 'r')}
+        {col2 && plateBtn(s, col2)}
         {col3 && cell(s, i, col3, 'eff')}
         {/* A timed set is started, not typed: the timer counts the hold down and checks the
             set off itself. The checkbox stays for anyone who timed it on their own watch. */}
