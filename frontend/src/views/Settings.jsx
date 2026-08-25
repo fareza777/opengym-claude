@@ -11,6 +11,8 @@ import { wakeLockSupported } from '../lib/wakelock.js'
 import { t, LANGS, INSTR_LANGS, deviceLang } from '../lib/i18n.js'
 import { DEMO, REPO } from '../lib/demo.js'
 import { MOBILE, shareExport, syncReminder } from '../lib/mobile.js'
+import { cacheSize, cacheCount, clearCache, preload } from '../lib/media-cache.js'
+import { imgSrc, gifSrc, exOr } from '../lib/exercises.js'
 import { loadStarterPlan, confirmSheet, importFromApp } from '../sheets.jsx'
 import Icon from '../components/Icon.jsx'
 import { Section, Row, SelectRow, Switch, Segmented, Button, TextField } from '../components/ui.jsx'
@@ -187,6 +189,8 @@ export default function Settings() {
     {/* Reset after reading so picking the same file twice still fires onChange. */}
     <input ref={importRef} type="file" accept=".csv,.xml,text/csv,text/xml" style={{ display: 'none' }}
       onChange={ev => { const f = ev.target.files[0]; if (f) importFromApp(f); ev.target.value = '' }} />
+
+    {MOBILE && <OfflineMediaCard S={S} toast={toast} />}
 
     {/* "Add to Home screen" makes no sense inside the native app */}
     {!MOBILE && <Section title={t('Tip')}>
@@ -367,4 +371,75 @@ function RegisterInline({ close, setUser, pushState, pullState, toast }) {
     </>}
     <div style={{ height: 12 }} /><Button variant="primary" onClick={go}>{t('Create passkey')}</Button>
   </>
+}
+
+/*  Offline exercise media.
+ *
+ *  The animations are not bundled — 140 MB is not a download anyone should make
+ *  to try a workout tracker — so they arrive from a CDN the first time an
+ *  exercise is opened and are kept on disk afterwards (lib/media-cache.js).
+ *
+ *  This card exists because that leaves one decision the app cannot make for
+ *  the user: WHEN the download happens. Someone paying by the megabyte wants
+ *  their plan pulled down at home on wifi, not discovered a set at a time in a
+ *  basement gym. So the plan's own exercises get an explicit button, with the
+ *  size stated before it is pressed rather than after.
+ */
+function OfflineMediaCard({ S, toast }) {
+  const [bytes, setBytes] = useState(0)
+  const [count, setCount] = useState(0)
+  const [busy, setBusy] = useState(null)   // { done, total } while downloading
+
+  const refresh = () => { cacheSize().then(setBytes); cacheCount().then(setCount) }
+  useEffect(refresh, [])
+
+  // Every distinct exercise across every routine, both the still and the
+  // animation — which is what an offline session actually needs.
+  const planUrls = () => {
+    const ids = new Set()
+    ;(S.routines || []).forEach(r => (r.ex || []).forEach(e => ids.add(e.id)))
+    const urls = []
+    ids.forEach(id => {
+      const ex = exOr(id)
+      if (ex.img) urls.push(imgSrc(ex))
+      if (ex.gif) urls.push(gifSrc(ex))
+    })
+    return urls
+  }
+
+  const download = async () => {
+    const urls = planUrls()
+    if (!urls.length) { toast(t('Add an exercise to a routine first — an empty plan has nothing to share.')); return }
+    setBusy({ done: 0, total: urls.length })
+    const r = await preload(urls, (done, total) => setBusy({ done, total }))
+    setBusy(null)
+    refresh()
+    toast(r.total ? t('{0} files saved for offline use', r.done) : t('Already saved for offline use'))
+  }
+
+  const mb = (bytes / 1048576).toFixed(bytes > 10485760 ? 0 : 1)
+
+  return (
+    <Section title={t('Offline')}
+      footer={t('Exercise animations are downloaded once and kept on this phone, so a workout you have opened before needs no connection. Clearing this frees space; the files come back when you next open the exercise.')}>
+      <Row icon="download" iconTint="var(--teal)"
+        title={t('Saved on this phone')}
+        subtitle={count ? t('{0} files', count) : t('Nothing saved yet')}
+        value={count ? mb + ' MB' : undefined} />
+      <Row icon="globe" iconTint="var(--acc)"
+        title={busy ? t('Downloading… {0}/{1}', busy.done, busy.total) : t('Download my plan for offline use')}
+        subtitle={busy ? undefined : t('Best done on wifi.')}
+        accessory={busy ? 'none' : 'chevron'}
+        onClick={busy ? undefined : download} />
+      {count > 0 && !busy && (
+        <Row icon="trash" iconTint="var(--red)" title={t('Clear downloaded media')} danger
+          onClick={() => confirmSheet({
+            title: t('Clear downloaded media?'),
+            message: t('Frees {0} MB. Your workouts and plan are not affected.', mb),
+            confirmText: t('Clear'), danger: true,
+            onConfirm: async () => { await clearCache(); refresh(); toast(t('Downloaded media cleared')) },
+          })} />
+      )}
+    </Section>
+  )
 }

@@ -1,7 +1,24 @@
 # Third-party notices
 
-openGym — Copyright (C) 2026 Duarte Santos.
-openGym's own code is licensed under the **GNU AGPL v3.0** (see [LICENSE](LICENSE)).
+## This is a fork
+
+**Tempa** is a fork of [**openGym**](https://github.com/DuarteSantos8/openGym).
+
+- openGym — Copyright (C) 2026 Duarte Santos. The original work, and the great
+  majority of the code here: the progression engine, the exercise model, the
+  workout flow, the statistics, the sync layer and the server are all his.
+- Tempa's changes — Copyright (C) 2026 the Tempa contributors. A Material 3
+  design system, an onboarding flow and plan generator, Bahasa Indonesia, an
+  on-device media cache, and the Android release configuration.
+
+Both are licensed under the **GNU AGPL v3.0** (see [LICENSE](LICENSE)), as the
+licence requires: a fork of AGPL software stays AGPL, keeps the original
+copyright notice, and states what was changed. The upstream copyright line above
+is not removable, and the fork is credited inside the app itself (Settings, at
+the bottom) rather than only in this file.
+
+The name "Tempa" and its anvil mark are the fork's own; they are not openGym's
+and imply no endorsement by its author.
 
 ## App store exception
 
@@ -11,6 +28,17 @@ Apple App Store and Google Play) whose terms of service would otherwise be incom
 with the AGPL, provided the corresponding source code remains available under the AGPL at
 the project repository. This permission applies to the distribution channel only and does
 not otherwise limit the license.
+
+This permission is what makes publishing Tempa on Google Play possible at all,
+and it comes with a condition the fork has to keep meeting: **the corresponding
+source must remain available under the AGPL**. That is why
+<https://github.com/fareza777/opengym-claude> is public, is linked from inside
+the app, and must stay public for as long as a build is on the store. Section 7
+permissions of this kind travel with the work under AGPL § 7, so the same
+permission and the same condition apply to this fork.
+
+The Tempa contributors grant the identical additional permission for their own
+changes, on the same terms.
 
 ## Body diagram geometry
 

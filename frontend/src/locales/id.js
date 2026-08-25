@@ -777,8 +777,8 @@ export default {
     'Berat badan saja — lantai dan sesuatu untuk bergantung',
   'Units': 'Satuan',
   'Your plan is ready': 'Rencanamu siap',
-  '{0} routines across {1} days, progressing by {2}.':
-    '{0} rutinitas dalam {1} hari, dengan progresi {2}.',
+  '{0} routines across {1} days, using {2}.':
+    '{0} rutinitas dalam {1} hari, memakai {2}.',
   'Nothing here is fixed — swap exercises, rename a day or change the rule any time in Plan.':
     'Tidak ada yang kaku di sini — ganti gerakan, ubah nama hari, atau ganti aturannya kapan saja di Rencana.',
   "Start today's workout": 'Mulai latihan hari ini',
@@ -786,4 +786,22 @@ export default {
   'Take me to the app': 'Bawa aku ke aplikasinya',
   'Today is a rest day — your first session is {0}.':
     'Hari ini hari istirahat — sesi pertamamu hari {0}.',
+  // --- offline media ---
+  'Offline': 'Offline',
+  'Saved on this phone': 'Tersimpan di HP ini',
+  '{0} files': '{0} berkas',
+  'Nothing saved yet': 'Belum ada yang tersimpan',
+  'Download my plan for offline use': 'Unduh rencanaku untuk dipakai offline',
+  'Best done on wifi.': 'Sebaiknya lewat wifi.',
+  'Downloading… {0}/{1}': 'Mengunduh… {0}/{1}',
+  '{0} files saved for offline use': '{0} berkas tersimpan untuk dipakai offline',
+  'Already saved for offline use': 'Sudah tersimpan untuk dipakai offline',
+  'Clear downloaded media': 'Hapus media yang diunduh',
+  'Clear downloaded media?': 'Hapus media yang diunduh?',
+  'Frees {0} MB. Your workouts and plan are not affected.':
+    'Mengosongkan {0} MB. Latihan dan rencanamu tidak terpengaruh.',
+  'Clear': 'Hapus',
+  'Downloaded media cleared': 'Media yang diunduh telah dihapus',
+  'Exercise animations are downloaded once and kept on this phone, so a workout you have opened before needs no connection. Clearing this frees space; the files come back when you next open the exercise.':
+    'Animasi gerakan diunduh sekali lalu disimpan di HP ini, jadi latihan yang pernah kamu buka tidak butuh koneksi. Menghapusnya mengosongkan ruang; berkasnya akan diunduh lagi saat kamu membuka gerakan itu.',
 }

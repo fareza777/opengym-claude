@@ -153,7 +153,9 @@ export default function Onboarding({ onDone }) {
         {step === 4 && <>
           <div className="onb-hero done"><Icon name="check" /></div>
           <h1 className="onb-h">{t('Your plan is ready')}</h1>
-          <p className="onb-p">{t('{0} routines across {1} days, progressing by {2}.',
+          {/* "progressing by Double progression" said the word twice; the policy
+              names already read as a rule, so the sentence just names it. */}
+          <p className="onb-p">{t('{0} routines across {1} days, using {2}.',
             plan.routineCount, plan.dayCount, t(POLICY_NAME[plan.policy]))}</p>
           <div className="onb-week">
             {plan.days.map((d, i) => (
