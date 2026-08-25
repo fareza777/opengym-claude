@@ -27,3 +27,7 @@ Thumbs.db
 *.log
 npm-debug.log*
 source-repo/
+
+# built APK/AAB handed over for testing — releases belong on GitHub Releases,
+# not in git history
+dist/
