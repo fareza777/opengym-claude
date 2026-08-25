@@ -1,26 +1,100 @@
 apply plugin: 'com.android.application'
 
+// Release signing.
+//
+// Nothing secret lives in the repository. `keystore.properties` is gitignored;
+// CI passes the same four values as environment variables instead. When neither
+// is present the release build still runs and is simply left unsigned, so a
+// contributor can check that `assembleRelease` compiles without being handed a
+// signing key — but `bundleRelease` output would then not be uploadable, which
+// is the correct and visible failure.
+def keystorePropertiesFile = rootProject.file('keystore.properties')
+def keystoreProperties = new Properties()
+def hasKeystoreFile = keystorePropertiesFile.exists()
+if (hasKeystoreFile) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+def ksPath = hasKeystoreFile ? keystoreProperties['storeFile'] : System.getenv('TEMPA_KEYSTORE')
+def ksPassword = hasKeystoreFile ? keystoreProperties['storePassword'] : System.getenv('TEMPA_KEYSTORE_PASSWORD')
+def ksAlias = hasKeystoreFile ? keystoreProperties['keyAlias'] : System.getenv('TEMPA_KEY_ALIAS')
+def ksKeyPassword = hasKeystoreFile ? keystoreProperties['keyPassword'] : System.getenv('TEMPA_KEY_PASSWORD')
+def canSign = ksPath != null && ksPassword != null && ksAlias != null && ksKeyPassword != null
+
 android {
-    namespace "ch.duartesantos.opengym"
+    namespace "io.github.fareza777.tempa"
     compileSdk rootProject.ext.compileSdkVersion
+
     defaultConfig {
-        applicationId "ch.duartesantos.opengym"
+        applicationId "io.github.fareza777.tempa"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 5
-        versionName "1.2.4"
+        // Keep in step with frontend/package.json and src/lib/version.js;
+        // scripts/check-release.mjs fails the build if they drift.
+        versionCode 6
+        versionName "2.0.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        // The Play listing declares these languages; without the filter, AAPT
+        // keeps every locale AndroidX ships and the bundle carries dozens of
+        // resource splits nothing references.
+        resourceConfigurations += ['en', 'id', 'de', 'es', 'fr', 'it', 'pt', 'pl', 'tr', 'ru', 'zh', 'ko', 'hi']
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
              // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
             ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+
+    signingConfigs {
+        if (canSign) {
+            release {
+                storeFile file(ksPath)
+                storePassword ksPassword
+                keyAlias ksAlias
+                keyPassword ksKeyPassword
+                // v1 (JAR signing) is what API 23 verifies against — v2 arrived
+                // in API 24 — and minSdk is 23, so it has to stay on or the app
+                // will not install on the oldest devices the listing claims.
+                enableV1Signing true
+                enableV2Signing true
+                enableV3Signing true
+            }
+        }
+    }
+
     buildTypes {
         release {
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            // R8 was off entirely. The Java side of this app is thin — a
+            // BridgeActivity and three plugins — but shrinking still removes
+            // the unreferenced half of AndroidX and the resource shrinker
+            // removes the launcher densities and AndroidX strings nothing
+            // points at. Both are safe here precisely because the app logic is
+            // in the WebView and cannot be reflected into.
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            if (canSign) {
+                signingConfig signingConfigs.release
+            }
         }
+        debug {
+            applicationIdSuffix ".debug"
+            versionNameSuffix "-debug"
+        }
+    }
+
+    // A reproducible release needs the JS bundle to be byte-identical, which it
+    // is — Vite hashes by content — but the packaging timestamps are not.
+    packagingOptions {
+        resources {
+            excludes += ['META-INF/*.kotlin_module', 'DebugProbesKt.bin']
+        }
+    }
+
+    lint {
+        // A lint error must not be the thing that stops a release upload the
+        // day the target-API deadline lands; the report is still produced.
+        abortOnError false
+        checkReleaseBuilds true
     }
 }
 
@@ -34,6 +108,7 @@ dependencies {
     implementation fileTree(include: ['*.jar'], dir: 'libs')
     implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
     implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
+    implementation "androidx.core:core:$androidxCoreVersion"
     implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
     implementation project(':capacitor-android')
     testImplementation "junit:junit:$junitVersion"

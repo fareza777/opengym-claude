@@ -1,7 +1,13 @@
 ext {
+    // minSdk 23 is Capacitor 7's floor and is kept deliberately: Indonesia — the
+    // app's primary market — still has a long tail of Android 6/7 devices, and
+    // nothing here needs a newer platform API.
     minSdkVersion = 23
-    compileSdkVersion = 35
-    targetSdkVersion = 35
+    // API 36 (Android 16). Google Play requires new apps and updates to target an
+    // API level released within the last year; API 36's deadline is 31 Aug 2026,
+    // so 35 would be rejected on upload from that date.
+    compileSdkVersion = 36
+    targetSdkVersion = 36
     androidxActivityVersion = '1.9.2'
     androidxAppCompatVersion = '1.7.0'
     androidxCoordinatorLayoutVersion = '1.2.0'

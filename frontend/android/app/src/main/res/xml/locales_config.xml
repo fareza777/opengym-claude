@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Per-app language (Android 13+). Lets someone run their phone in Indonesian and
+  Tempa in English, or the reverse, from system Settings — which matters here
+  because the exercise instructions only exist in some of these languages.
+
+  Keep in step with LANGS in frontend/src/lib/i18n.js.
+-->
+<locale-config xmlns:android="http://schemas.android.com/apk/res/android">
+    <locale android:name="en" />
+    <locale android:name="id" />
+    <locale android:name="de" />
+    <locale android:name="es" />
+    <locale android:name="fr" />
+    <locale android:name="it" />
+    <locale android:name="pt" />
+    <locale android:name="pl" />
+    <locale android:name="tr" />
+    <locale android:name="ru" />
+    <locale android:name="zh" />
+    <locale android:name="ko" />
+    <locale android:name="hi" />
+</locale-config>

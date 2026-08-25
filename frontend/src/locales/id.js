@@ -783,4 +783,7 @@ export default {
     'Tidak ada yang kaku di sini — ganti gerakan, ubah nama hari, atau ganti aturannya kapan saja di Rencana.',
   "Start today's workout": 'Mulai latihan hari ini',
   'Later — take me to the app': 'Nanti saja — bawa aku ke aplikasinya',
+  'Take me to the app': 'Bawa aku ke aplikasinya',
+  'Today is a rest day — your first session is {0}.':
+    'Hari ini hari istirahat — sesi pertamamu hari {0}.',
 }

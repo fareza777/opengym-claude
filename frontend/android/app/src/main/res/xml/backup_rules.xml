@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Android 11 and below (android:fullBackupContent).
+
+  Tempa's promise is that the training log stays on the phone, so Google Drive
+  auto-backup is not something to leave on by accident: it would copy every
+  workout, every weigh-in and every body-weight entry to Google's servers
+  without the user ever being asked, and it would have to be disclosed on the
+  Play Data safety form as exactly that.
+
+  So the data files are excluded and backup is left enabled only for what makes
+  a reinstall less annoying — nothing here identifies a person or their
+  training.
+
+  A user who wants their data off the device has Settings -> Export backup,
+  which hands them the file and lets them decide where it goes.
+-->
+<full-backup-content>
+    <exclude domain="file" path="opengym-state.json" />
+    <exclude domain="database" path="." />
+    <exclude domain="sharedpref" path="." />
+    <!-- the WebView profile, which is where localStorage lives -->
+    <exclude domain="file" path="app_webview" />
+    <exclude domain="file" path="app_textures" />
+</full-backup-content>

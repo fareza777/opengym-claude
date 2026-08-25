@@ -1,22 +1,29 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <!-- Base application theme. -->
-    <style name="AppTheme" parent="Theme.AppCompat.Light.DarkActionBar">
-        <!-- Customize your theme here. -->
-        <item name="colorPrimary">@color/colorPrimary</item>
-        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
-        <item name="colorAccent">@color/colorAccent</item>
+    <!-- The WebView paints the entire UI, so the native theme's only jobs are:
+         no action bar, no white flash behind the page, and edge-to-edge system
+         bars that the CSS safe-area insets can then work against. -->
+    <style name="AppTheme" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="android:background">@color/brandSurface</item>
+        <item name="android:windowBackground">@color/brandSurface</item>
     </style>
 
     <style name="AppTheme.NoActionBar" parent="Theme.AppCompat.DayNight.NoActionBar">
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
-        <item name="android:background">@null</item>
+        <item name="android:background">@color/brandSurface</item>
     </style>
 
-
+    <!-- Android 12+ splash screen API. The previous theme set only
+         android:background to a full-bleed @drawable/splash, which on 12+ is
+         ignored in favour of the platform's own icon-on-a-colour treatment —
+         so the splash was a white circle on whatever the default was. Naming
+         the icon and the background explicitly is what makes the cold start
+         look deliberate. -->
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
-        <item name="android:background">@drawable/splash</item>
+        <item name="windowSplashScreenBackground">@color/brandSurface</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_icon</item>
+        <item name="postSplashScreenTheme">@style/AppTheme.NoActionBar</item>
     </style>
 </resources>

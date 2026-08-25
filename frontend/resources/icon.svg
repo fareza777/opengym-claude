@@ -1,13 +1,10 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 512 512">
-  <!-- App-icon source == the PWA icon (public/icon-512.png), geometry traced 1:1 so the
-       native app, the home-screen PWA and the website favicon all show the same icon.
-       Generate platform icons + splash via `npx @capacitor/assets generate` — docs/MOBILE.md. -->
-  <rect width="512" height="512" fill="#0c0e12"/>
-  <g fill="#a3e635">
-    <rect x="80" y="242" width="352" height="28"/>
-    <rect x="80" y="199" width="36" height="114"/>
-    <rect x="131" y="169" width="47" height="174"/>
-    <rect x="334" y="169" width="47" height="174"/>
-    <rect x="396" y="199" width="36" height="114"/>
-  </g>
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 108 108">
+  <defs>
+    <linearGradient id="ember" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FF9A4D"/>
+      <stop offset="1" stop-color="#E8630F"/>
+    </linearGradient>
+  </defs>
+  <rect width="108" height="108" fill="#151312"/>
+  <g transform="translate(-0.5 -3) translate(54.5 57) scale(0.94) translate(-54.5 -57)" fill="url(#ember)"><path d="M22 34 H68 L83 40 Q87 43 83 46 L68 52 H58 L62 68 H70 Q74 68 74 72 V76 Q74 80 70 80 H28 Q24 80 24 76 V72 Q24 68 28 68 H36 L40 52 H22 Z"/></g>
 </svg>

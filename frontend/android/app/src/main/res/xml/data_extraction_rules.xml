@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Android 12+ (android:dataExtractionRules). Same policy as backup_rules.xml,
+  stated for both transports:
+
+    <cloud-backup>   Google Drive auto-backup  — training data excluded
+    <device-transfer> phone-to-phone transfer  — training data excluded
+
+  device-transfer is a defensible place to allow it (the data never leaves the
+  user's own hands), but the transfer is not something the app can explain or
+  confirm at the moment it happens, and "stays on this device" has to mean the
+  same thing in both. Export backup remains the supported way to move a log to
+  a new phone.
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="file" path="opengym-state.json" />
+        <exclude domain="database" path="." />
+        <exclude domain="sharedpref" path="." />
+        <exclude domain="file" path="app_webview" />
+        <exclude domain="file" path="app_textures" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="file" path="opengym-state.json" />
+        <exclude domain="database" path="." />
+        <exclude domain="sharedpref" path="." />
+        <exclude domain="file" path="app_webview" />
+        <exclude domain="file" path="app_textures" />
+    </device-transfer>
+</data-extraction-rules>

@@ -1,21 +1,43 @@
-# Add project specific ProGuard rules here.
-# You can control the set of applied configuration files using the
-# proguardFiles setting in build.gradle.
+# R8 rules for Tempa.
 #
-# For more details, see
-#   http://developer.android.com/guide/developing/tools/proguard.html
+# The whole app is a WebView, so the Java surface is small: BridgeActivity, the
+# Capacitor bridge, and three plugins. What makes shrinking risky here is that
+# Capacitor resolves plugins BY NAME through reflection at runtime — R8 cannot
+# see those references, so anything it strips comes back as a plugin that
+# silently does not exist. Everything below exists for that reason.
 
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
+# --- Capacitor bridge & plugins -------------------------------------------
+# Plugin classes are looked up reflectively from the plugin registry.
+-keep public class com.getcapacitor.** { *; }
+-keep public class io.ionic.** { *; }
+-keep @com.getcapacitor.annotation.CapacitorPlugin public class * { *; }
+# @PluginMethod is invoked by name from JS; the method names must survive.
+-keepclassmembers class * extends com.getcapacitor.Plugin {
+    @com.getcapacitor.PluginMethod <methods>;
+}
+# The plugins this app actually bundles.
+-keep class com.capacitorjs.plugins.filesystem.** { *; }
+-keep class com.capacitorjs.plugins.localnotifications.** { *; }
+-keep class com.capacitorjs.plugins.share.** { *; }
 
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
+# --- Cordova compatibility layer ------------------------------------------
+-keep class org.apache.cordova.** { *; }
 
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
+# --- JS bridge -------------------------------------------------------------
+# Anything reachable from JS via @JavascriptInterface is called by name.
+-keepclassmembers class * {
+    @android.webkit.JavascriptInterface <methods>;
+}
+
+# --- our own code ----------------------------------------------------------
+# MainActivity is named from AndroidManifest.xml.
+-keep class io.github.fareza777.tempa.MainActivity { *; }
+
+# --- noise -----------------------------------------------------------------
+# Keep the line numbers so a Play Console crash report is readable; the source
+# file name itself is not useful and is renamed.
+-keepattributes SourceFile,LineNumberTable
+-renamesourcefileattribute SourceFile
+# AndroidX and OkHttp reference optional annotations that are not on the path.
+-dontwarn org.codehaus.mojo.animal_sniffer.**
+-dontwarn javax.annotation.**

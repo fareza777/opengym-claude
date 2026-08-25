@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Dark is the app's default theme, so the night values equal the base ones.
+     The file exists so the light overlay below has something to override. -->
+<resources>
+    <color name="brandSurface">#151312</color>
+</resources>

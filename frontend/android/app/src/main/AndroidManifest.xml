@@ -1,14 +1,21 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
     <application
         android:allowBackup="true"
+        android:fullBackupContent="@xml/backup_rules"
+        android:dataExtractionRules="@xml/data_extraction_rules"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
+        android:localeConfig="@xml/locales_config"
+        android:enableOnBackInvokedCallback="true"
         android:theme="@style/AppTheme">
+
         <activity
-            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode|navigation"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode|navigation|density|fontScale"
             android:name=".MainActivity"
             android:label="@string/title_activity_main"
             android:theme="@style/AppTheme.NoActionBarLaunch"
@@ -29,11 +36,40 @@
         </provider>
     </application>
 
-    <!-- Permissions -->
+    <!-- ================================================== permissions == -->
 
+    <!-- The app has no backend and makes no requests of its own. INTERNET is
+         still required because the exercise animations are fetched from a CDN
+         on first view (they are cached on device afterwards) — see
+         docs/PRIVACY.md, which is what the Play Data safety form is filled in
+         from. -->
     <uses-permission android:name="android.permission.INTERNET" />
-    <!-- Workout-day reminder: lets the local-notifications plugin fire at the exact minute
-         on Android 12+. Where it isn't granted, scheduling silently falls back to inexact
-         alarms — the reminder still arrives, just not to the minute. -->
-    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+
+    <!-- POST_NOTIFICATIONS, RECEIVE_BOOT_COMPLETED and WAKE_LOCK are not
+         declared here: they merge in from @capacitor/local-notifications, which
+         is the component that actually uses them. Declaring them twice would
+         only make it harder to see why they are present. -->
+
+    <!-- SCHEDULE_EXACT_ALARM is deliberately NOT declared.
+         Play restricts it to apps whose core function is an alarm clock or a
+         calendar, and requires a declaration form; a workout-day reminder does
+         not qualify, so declaring it is a rejection risk with nothing to gain.
+         Without it @capacitor/local-notifications falls back to
+         setAndAllowWhileIdle (LocalNotificationManager.java:380) — the reminder
+         still arrives, just not to the exact minute, which is the right
+         trade-off for a "you have a session planned today" nudge.
+         The `remove` is explicit so a future plugin update cannot merge it back
+         in without someone noticing this comment. -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"
+        tools:node="remove" />
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM"
+        tools:node="remove" />
+
+    <!-- Play lists an app as phone-only unless it says otherwise. Nothing here
+         needs telephony or a touchscreen beyond the basics, so the hardware is
+         declared optional and the listing reaches tablets and Chromebooks too. -->
+    <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.telephony" android:required="false" />
+
 </manifest>

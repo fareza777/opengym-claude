@@ -1,12 +1,18 @@
 {
-  "name": "opengym-frontend",
+  "name": "tempa",
   "private": true,
-  "version": "1.2.4",
+  "version": "2.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "build:mobile": "VITE_MOBILE=1 VITE_IMG_BASE=https://cdn.jsdelivr.net/gh/hasaneyldrm/exercises-dataset@7455efae41b330c265e7cd4b78dfa848e7ce5ebd/images/ VITE_GIF_BASE=https://cdn.jsdelivr.net/gh/hasaneyldrm/exercises-dataset@7455efae41b330c265e7cd4b78dfa848e7ce5ebd/videos/ vite build && cap sync",
+    "build:mobile": "cross-env VITE_MOBILE=1 VITE_IMG_BASE=https://cdn.jsdelivr.net/gh/hasaneyldrm/exercises-dataset@7455efae41b330c265e7cd4b78dfa848e7ce5ebd/images/ VITE_GIF_BASE=https://cdn.jsdelivr.net/gh/hasaneyldrm/exercises-dataset@7455efae41b330c265e7cd4b78dfa848e7ce5ebd/videos/ vite build",
+    "build:demo": "cross-env VITE_DEMO=1 VITE_IMG_BASE=https://cdn.jsdelivr.net/gh/hasaneyldrm/exercises-dataset@7455efae41b330c265e7cd4b78dfa848e7ce5ebd/images/ VITE_GIF_BASE=https://cdn.jsdelivr.net/gh/hasaneyldrm/exercises-dataset@7455efae41b330c265e7cd4b78dfa848e7ce5ebd/videos/ vite build",
+    "sync:android": "npm run build:mobile && cap sync android",
+    "icons": "node scripts/gen-icons.mjs",
+    "check:release": "node scripts/check-release.mjs",
+    "android:apk": "npm run sync:android && cd android && gradlew assembleRelease",
+    "android:bundle": "npm run check:release && npm run sync:android && cd android && gradlew bundleRelease",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest"
@@ -29,6 +35,7 @@
     "@capacitor/ios": "^7.6.8",
     "@vitejs/plugin-react": "^6.0.3",
     "vite": "^8.1.5",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.10",
+    "cross-env": "^7.0.3"
   }
 }

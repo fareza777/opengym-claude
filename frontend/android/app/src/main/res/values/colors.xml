@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Native-side colours only — the app's real palette is CSS, in
+  frontend/src/index.css. These four exist so the window behind the WebView, the
+  splash screen and the launcher icon are the brand colour rather than the
+  platform default, which is what removes the white flash on cold start.
+
+  The dark theme surface token is #121213 tinted 3% with the ember seed.
+  Keep this in step with index.css.
+-->
+<resources>
+    <color name="brandSurface">#151312</color>
+    <color name="brandSurfaceLight">#FCFAF8</color>
+    <color name="brandPrimary">#FF9A4D</color>
+    <color name="ic_launcher_background">#151312</color>
+</resources>

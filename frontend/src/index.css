@@ -48,22 +48,40 @@
   --seed-l: #99450a;   /* light-theme primary */
   --seed-d: #ff9a4d;   /* dark-theme primary  */
 
+  /*  Every tonal value is declared TWICE: a plain hex, then the color-mix that
+      supersedes it. A declaration whose value the engine cannot parse is
+      dropped and the previous one stands, so an Android System WebView older
+      than Chrome 111 — rare, but minSdk is 23 and not every device updates it
+      — gets a flat, correct, slightly less tinted palette instead of an app
+      with no colours at all. The hexes are the ember accent's mixes, rounded;
+      regenerate them if the seed changes.                                     */
   --prim:      var(--seed-d);
   --on-prim:   #4a1f00;
+  --prim-c:    #4a3327;
   --prim-c:    color-mix(in oklab, var(--seed-d) 26%, var(--n-10));
+  --on-prim-c: #ffd7b5;
   --on-prim-c: color-mix(in oklab, var(--seed-d) 88%, white);
 
   /* the secondary container drives the nav indicator, filter chips, tonal buttons */
+  --sec-c:    #4a3a30;
   --sec-c:    color-mix(in oklab, var(--seed-d) 20%, var(--n-12));
+  --on-sec-c: #ffb887;
   --on-sec-c: color-mix(in oklab, var(--seed-d) 82%, var(--n-90));
 
   /* surfaces — a tonal ramp, every step tinted with the accent hue */
+  --surf-dim:       #100e0d;
   --surf-dim:       color-mix(in oklab, var(--seed-d) 3%, var(--n-0));
+  --surf:           #151312;
   --surf:           color-mix(in oklab, var(--seed-d) 3%, var(--n-4));
+  --surf-c-lowest:  #100e0d;
   --surf-c-lowest:  color-mix(in oklab, var(--seed-d) 3%, var(--n-0));
+  --surf-c-low:     #1d1a18;
   --surf-c-low:     color-mix(in oklab, var(--seed-d) 4%, var(--n-6));
+  --surf-c:         #262220;
   --surf-c:         color-mix(in oklab, var(--seed-d) 5%, var(--n-10));
+  --surf-c-high:    #302b28;
   --surf-c-high:    color-mix(in oklab, var(--seed-d) 6%, var(--n-12));
+  --surf-c-highest: #3c3733;
   --surf-c-highest: color-mix(in oklab, var(--seed-d) 7%, var(--n-17));
 
   --on-surf:     #e6e2df;
@@ -113,8 +131,14 @@
   --el-3: 0 4px 8px 3px rgba(0,0,0,.15), 0 1px 3px rgba(0,0,0,.30);
   --el-4: 0 6px 10px 4px rgba(0,0,0,.15), 0 2px 3px rgba(0,0,0,.30);
 
-  --sab:env(safe-area-inset-bottom,0px);
+  /* Safe area. On Android these are overwritten at runtime with the real window
+     insets by MainActivity, because Android WebView populates env(safe-area-*)
+     inconsistently and a 0 there puts the navigation bar on top of the tab bar.
+     The env() values stay as the fallback for the browser and iOS builds. */
   --sat:env(safe-area-inset-top,0px);
+  --sab:env(safe-area-inset-bottom,0px);
+  --sal:env(safe-area-inset-left,0px);
+  --sar:env(safe-area-inset-right,0px);
 
   /* ------------------------------------------------- LEGACY ALIASES ----- */
   /* Referenced from inline styles in the views; mapping them here means the
@@ -126,7 +150,9 @@
   --surface-3: var(--surf-c-highest);
   --label:     var(--on-surf);
   --label-2:   var(--on-surf-var);
+  --label-3:   rgba(197,192,188,.62);
   --label-3:   color-mix(in oklab, var(--on-surf-var) 62%, transparent);
+  --label-4:   rgba(197,192,188,.34);
   --label-4:   color-mix(in oklab, var(--on-surf-var) 34%, transparent);
   --sep:       var(--outline-var);
   --sep-op:    color-mix(in oklab, var(--outline-var) 70%, transparent);
@@ -152,18 +178,28 @@
 
   --prim:      var(--seed-l);
   --on-prim:   #ffffff;
+  --prim-c:    #f7d9c2;
   --prim-c:    color-mix(in oklab, var(--seed-l) 22%, white);
+  --on-prim-c: #4d2205;
   --on-prim-c: color-mix(in oklab, var(--seed-l) 72%, black);
 
+  --sec-c:    #e6d8cd;
   --sec-c:    color-mix(in oklab, var(--seed-l) 15%, var(--n-12));
+  --on-sec-c: #5e3413;
   --on-sec-c: color-mix(in oklab, var(--seed-l) 68%, black);
 
+  --surf-dim:       #ddd6d0;
   --surf-dim:       color-mix(in oklab, var(--seed-l) 6%, #e0dedb);
+  --surf:           #faf7f4;
   --surf:           color-mix(in oklab, var(--seed-l) 3%, var(--n-4));
   --surf-c-lowest:  #ffffff;
+  --surf-c-low:     #f5f0eb;
   --surf-c-low:     color-mix(in oklab, var(--seed-l) 3%, var(--n-6));
+  --surf-c:         #eee8e2;
   --surf-c:         color-mix(in oklab, var(--seed-l) 4%, var(--n-10));
+  --surf-c-high:    #e7e0d9;
   --surf-c-high:    color-mix(in oklab, var(--seed-l) 5%, var(--n-12));
+  --surf-c-highest: #ded7d0;
   --surf-c-highest: color-mix(in oklab, var(--seed-l) 6%, var(--n-17));
 
   --on-surf:     #1a1a1b;
@@ -191,7 +227,9 @@
   --el-3: 0 4px 8px 3px rgba(0,0,0,.09), 0 1px 3px rgba(0,0,0,.10);
   --el-4: 0 6px 10px 4px rgba(0,0,0,.09), 0 2px 3px rgba(0,0,0,.10);
 
+  --label-3: rgba(74,70,67,.56);
   --label-3: color-mix(in oklab, var(--on-surf-var) 56%, transparent);
+  --label-4: rgba(74,70,67,.28);
   --label-4: color-mix(in oklab, var(--on-surf-var) 28%, transparent);
 }
 
@@ -302,11 +340,17 @@ button,.chip,.tile,.item,.wday,.cal-d,.swatch,.hm-c,.lrow,.seg button,.stp butto
 
 /* =============================================================== LAYOUT === */
 #app{
-  /* bottom: nav bar (80) + its own safe area + breathing room past the FAB */
-  padding:calc(var(--sat) + 4px) var(--pad) calc(116px + var(--sab));
+  /* Bottom clearance = nav bar (80) + FAB (56) + the 16px it floats above the
+     bar + a 16px gap. A FAB is expected to float over scrolling content, but
+     the LAST item still has to be able to scroll out from under it, and at 116
+     it could not — the streak card on Home sat permanently behind the FAB.
+     The horizontal padding takes whichever is larger, the layout gutter or a
+     display cutout: a punch-hole in landscape is wider than 16px. */
+  padding:calc(var(--sat) + 4px) max(var(--pad),var(--sar))
+          calc(168px + var(--sab)) max(var(--pad),var(--sal));
   max-width:560px;margin:0 auto;
 }
-body.resting #app{padding-bottom:calc(248px + var(--sab))}
+body.resting #app{padding-bottom:calc(300px + var(--sab))}
 
 /* M3 shared-axis: the incoming view rises and fades rather than sliding */
 @keyframes viewfade{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
@@ -494,7 +538,12 @@ h4.sec{
 #tabbar{
   position:fixed;left:0;right:0;bottom:0;z-index:50;
   display:flex;justify-content:space-around;align-items:stretch;
-  height:calc(80px + var(--sab));padding:12px 8px calc(16px + var(--sab));
+  /* The bar paints all the way to the physical bottom edge and pads its
+     contents up out of the gesture area, rather than floating above a strip of
+     window background — that strip is what gives a Capacitor app its two-tone
+     bottom edge. max() keeps a floor under the pill if an inset ever reads 0. */
+  height:calc(80px + var(--sab));
+  padding:12px max(8px,var(--sal)) max(16px,var(--sab)) max(8px,var(--sar));
   background:var(--surf-c);
   border-top:none;
 }
@@ -529,7 +578,7 @@ h4.sec{
     screen's primary action. It extends into a labelled pill while a workout is
     running, because "Resume" needs to say what it resumes.                    */
 #fab{
-  position:fixed;right:16px;bottom:calc(96px + var(--sab));z-index:55;
+  position:fixed;right:calc(16px + var(--sar));bottom:calc(96px + var(--sab));z-index:55;
   display:inline-flex;align-items:center;gap:12px;
   height:56px;min-width:56px;padding:0 16px;
   border-radius:var(--r-lg);background:var(--prim-c);color:var(--on-prim-c);
@@ -898,22 +947,35 @@ h4.sec{
   font-size:11px;color:var(--on-surf-var);font-weight:500;
   text-transform:uppercase;letter-spacing:.0455em;
 }
-.sethead .n-sp{width:28px;flex:none}
+.sethead .n-sp{width:24px;flex:none}
 .sethead .w-sp{flex:1.4;text-align:center}
 .sethead .r-sp{flex:1;text-align:center}
 .sethead .eff-sp{text-align:center}
-.sethead .ck-sp{width:44px;flex:none}
-.setrow{display:flex;align-items:center;gap:8px;padding:5px 0;position:relative}
+.sethead .ck-sp{width:40px;flex:none}
+/*  Set-row metrics are a width budget, not a taste call, and the budget is set
+    by the narrowest screen Android supports (320dp). Everything on the row
+    except the two number fields is fixed, so every pixel spent on the set badge,
+    the checkbox or a gap comes straight out of the digits — and at the previous
+    sizes the reps field was squeezed to zero width on a 320dp phone: the
+    steppers rendered, the number did not. It looked like missing data.
+
+    320dp: 256 content - 24 (badge) - 40 (check) - 15 (gaps) = 177 across two
+    steppers, 1.4 : 1 -> 103 / 74, minus 2x26 of buttons = 51 / 22 for digits.  */
+.setrow{display:flex;align-items:center;gap:6px;padding:5px 0;position:relative}
 .setrow .n{
-  width:28px;height:28px;border-radius:var(--r-sm);background:var(--surf-c-high);
+  width:24px;height:24px;border-radius:var(--r-xs);background:var(--surf-c-high);
   color:var(--on-surf-var);display:flex;align-items:center;justify-content:center;
-  font-size:13px;font-weight:500;flex:none;
+  font-size:12px;font-weight:500;flex:none;
   transition:background var(--fast),color var(--fast);
 }
 .setrow .stp.w{flex:1.4;min-width:0}
 .setrow .stp.r{flex:1;min-width:0}
 .setrow .stp.eff{flex:1.1;min-width:0}
-.setrow .stp button{width:36px;height:44px}
+/* The buttons may shrink; the digits may not. A stepper you can read but have to
+   aim at beats one you can hit but cannot read. */
+.setrow .stp button{flex:0 1 30px;width:30px;min-width:24px;height:44px}
+.setrow .stp .val{min-width:22px}
+.setrow .chk,.setrow .ck{width:40px}
 /* a 3rd stepper (RIR/RPE) needs narrower buttons and a tighter row gap to fit
    next to weight+reps on a narrow phone. RIR's own value is short ("1.5") so its
    buttons shrink the most; weight and reps just enough to make room, since
@@ -923,17 +985,34 @@ h4.sec{
 .setrow.eff3 .stp.w,.sethead.eff3 .w-sp{flex:1.2}
 .setrow.eff3 .stp.r,.sethead.eff3 .r-sp{flex:1}
 .setrow.eff3 .stp.eff,.sethead.eff3 .eff-sp{flex:.85}
-.setrow.eff3 .stp button{width:26px}
-.setrow.eff3 .stp.eff button{width:22px}
+.setrow.eff3 .stp button{flex:0 1 24px;width:24px;min-width:20px}
+.setrow.eff3 .stp.eff button{flex:0 1 20px;width:20px;min-width:18px}
 .setrow.eff3 .stp .num{font-size:15px}
-.setrow.eff3 .chk,.setrow.eff3 .ck{width:36px}
-.setrow.eff3 .sethead .ck-sp{width:36px}
+.setrow.eff3 .stp .val{min-width:18px}
+.setrow.eff3 .chk,.setrow.eff3 .ck{width:34px}
+.sethead.eff3 .ck-sp{width:34px}
 /* A finished set steps down a tone instead of fading out — at .45 opacity the
    numbers you just logged became unreadable, which is the one thing you look
    back at between sets. */
 .setrow.done .n{background:var(--prim);color:var(--on-prim)}
 .setrow.done .stp{background:var(--surf-c-low)}
 .setrow.done .stp .num,.setrow.done .stp button{color:var(--on-surf-var)}
+/*  The 320dp floor. Below 360dp the budget above still does not leave the reps
+    field enough room for two digits, so the fixed costs shrink one more step.
+    This is the width of the cheapest Android phones still being sold, which is
+    exactly the audience this app is aimed at. */
+@media (max-width:359px){
+  .setrow{gap:5px}
+  .setrow .n,.sethead .n-sp{width:22px}
+  .setrow .n{height:22px;font-size:11px}
+  .setrow .stp button{flex:0 1 26px;width:26px;min-width:22px}
+  .setrow .chk,.setrow .ck,.sethead .ck-sp{width:36px}
+  .setrow .stp .num{font-size:16px}
+  .setrow.eff3 .stp button{flex:0 1 20px;width:20px;min-width:17px}
+  .setrow.eff3 .stp.eff button{flex:0 1 17px;width:17px;min-width:15px}
+  .setrow.eff3 .stp .num{font-size:13px}
+}
+
 /* why the next target is what it is */
 .progline{
   display:flex;align-items:flex-start;gap:8px;margin:8px 0 4px;
@@ -1199,7 +1278,7 @@ h4.sec{
 /*  M3 snackbar: inverse surface, 4px radius (not a pill — a pill is a chip),
     left-aligned, and it clears the FAB.                                       */
 #toast{
-  position:fixed;left:16px;right:16px;
+  position:fixed;left:calc(16px + var(--sal));right:calc(16px + var(--sar));
   bottom:calc(168px + var(--sab));z-index:200;
   background:var(--inv-surf);color:var(--inv-on-surf);
   border-radius:var(--r-xs);padding:14px 16px;font-size:14px;font-weight:400;
@@ -1305,8 +1384,10 @@ h4.sec{
     not met yet, and each step needs the whole screen for one question.        */
 .onb{
   min-height:100dvh;display:flex;flex-direction:column;
+  /* Cancels #app's own padding so the flow owns the whole screen — it is not a
+     view inside the app chrome, it runs before there is any. */
   margin:calc(var(--sat) * -1 - 4px) calc(var(--pad) * -1) calc(-116px - var(--sab));
-  padding:calc(var(--sat) + 8px) var(--pad) calc(20px + var(--sab));
+  padding:calc(var(--sat) + 8px) var(--pad) 0;
   background:var(--surf);
 }
 .onb-top{display:flex;align-items:center;gap:12px;min-height:48px}
@@ -1318,7 +1399,7 @@ h4.sec{
 }
 .onb-prog i.on{background:var(--prim)}
 
-.onb-body{flex:1;display:flex;flex-direction:column;padding:24px 0 16px;animation:onbin var(--slow) var(--ease-emph-dec)}
+.onb-body{flex:1;display:flex;flex-direction:column;padding:24px 0 8px;animation:onbin var(--slow) var(--ease-emph-dec)}
 @keyframes onbin{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:none}}
 
 .onb-hero{
@@ -1400,7 +1481,26 @@ h4.sec{
 }
 .onb-wn .icn{font-size:19px;color:var(--prim)}
 
-.onb-foot{padding-top:8px}
+/*  Sticky, because the primary action must never be below the fold. On a
+    320x640 screen — the narrowest and shortest Android still supports, and
+    common in the markets this app is aimed at — the goal step is taller than
+    the viewport, and "Continue" was only reachable by scrolling past the last
+    option. A fade above it keeps content from appearing to end abruptly under
+    the button. */
+.onb-hint{
+  text-align:center;font-size:13px;line-height:1.45;color:var(--on-surf-var);
+  letter-spacing:.0192em;padding:12px 8px 0;
+}
+.onb-foot{
+  position:sticky;bottom:0;z-index:1;
+  padding:16px 0 calc(4px + var(--sab));
+  background:var(--surf);
+}
+.onb-foot::before{
+  content:'';position:absolute;left:0;right:0;bottom:100%;height:24px;
+  background:linear-gradient(to top,var(--surf),transparent);
+  pointer-events:none;
+}
 
 @media (min-width:1000px){
   .onb{max-width:560px;margin-left:auto;margin-right:auto}

@@ -1,9 +1,10 @@
 {
-  "appId": "ch.duartesantos.opengym",
-  "appName": "openGym",
+  "appId": "io.github.fareza777.tempa",
+  "appName": "Tempa",
   "webDir": "dist",
-  "backgroundColor": "#0c0e12",
+  "backgroundColor": "#121213",
   "android": {
-    "allowMixedContent": false
+    "allowMixedContent": false,
+    "adjustMarginsForEdgeToEdge": "disable"
   }
 }

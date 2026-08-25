@@ -81,6 +81,12 @@ export default function Onboarding({ onDone }) {
   }
 
   const plan = describePlan({ goal, days, equipment })
+  // Whether the plan actually has a session today decides what the last screen
+  // can honestly offer. Promising "Start today's workout" on a rest day and then
+  // landing on Home is the kind of small lie that costs the app its credibility
+  // in the first ninety seconds.
+  const trainsToday = plan.days.includes(new Date().getDay())
+  const nextDay = plan.days.find(d => d > new Date().getDay()) ?? plan.days[0]
 
   return (
     <div className="onb">
@@ -173,11 +179,14 @@ export default function Onboarding({ onDone }) {
             {step === 0 ? t('Get started') : t('Continue')}
           </Button>
         )}
-        {step === STEPS - 1 && <>
+        {step === STEPS - 1 && (trainsToday ? <>
           <Button variant="primary" icon="play" onClick={() => commit(true)}>{t("Start today's workout")}</Button>
           <div style={{ height: 8 }} />
           <Button variant="ghost" onClick={() => commit(false)}>{t('Later — take me to the app')}</Button>
-        </>}
+        </> : <>
+          <Button variant="primary" trailingIcon="chevronRight" onClick={() => commit(false)}>{t('Take me to the app')}</Button>
+          <div className="onb-hint">{t('Today is a rest day — your first session is {0}.', t(DAYN[nextDay]))}</div>
+        </>)}
       </div>
     </div>
   )
