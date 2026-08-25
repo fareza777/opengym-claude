@@ -1,919 +1,1441 @@
 /* ============================================================================
-   openGym — design system
+   Tempa — design system
    ----------------------------------------------------------------------------
-   Rebuilt around four rules, each aimed at a specific "generated" tell in the
-   previous sheet:
+   Rebuilt from an iOS-derived sheet onto Material 3 Expressive, because the app
+   ships on Android and the old one read as a port: SF Pro with iOS letter-
+   spacing, Apple system colours, inset-grouped lists, a raised centre tab, and
+   press feedback that scaled instead of rippling.
 
-   1. ONE TYPE SCALE, MOSTLY REGULAR WEIGHT. The old sheet set font-weight 700/800
-      on nearly every element, which flattens hierarchy — when everything shouts,
-      position is the only cue left. Here weight carries meaning: 600 for a title,
-      400 for its content, and size does the rest.
-   2. A NEUTRAL SURFACE RAMP. Cards are near-neutral greys a few points apart, not
-      saturated blue-greys. Colour is spent only on the accent and on status.
-   3. HAIRLINES, NOT BORDERS. Separators are sub-pixel and inset past the icon
-      rail, so a list reads as one object instead of a stack of outlined boxes.
-   4. MOTION THAT ACKNOWLEDGES, NOT ANIMATES. Presses scale ~2%, transitions run
-      140–220ms on an ease-out curve. Nothing bounces or slides for decoration.
+   Four rules, each replacing an iOS convention with its Android counterpart:
+
+   1. TONAL SURFACES, NOT NEUTRAL GREYS. Every surface carries a few percent of
+      the accent hue, and elevation is a step up that ramp rather than a shadow.
+      This is the loudest M3 signal, and it is what makes a recolour feel like a
+      theme instead of a highlight.
+   2. CONTAINERS, NOT HAIRLINES. Related rows sit in a rounded container on its
+      own surface tone. Separators are used sparingly, and only inside something
+      that is already doing the grouping.
+   3. STATE LAYERS AND RIPPLE. A press paints an on-surface overlay and sends a
+      ripple out from the finger. Nothing scales — scaling is an iOS tell and it
+      fights the ripple when both run.
+   4. SHAPE CARRIES ROLE. Full-pill buttons and chips, 16px cards, 28px sheets
+      and dialogs, a 16px rounded-square FAB. Roundness is not decoration; the
+      radius tells you what kind of thing you are looking at.
+
+   Legacy token names (--acc, --surface, --label-2, --sep…) are kept as aliases
+   over the M3 roles, because the views reference them from inline styles.
+   Change the role, not the alias.
    ========================================================================== */
 
-/* ---------------------------------------------------------------- tokens -- */
+/* ======================================================== M3 COLOUR ROLES == */
+/*  Each accent is seeded as two tones — the light-theme primary (M3 tone 40)
+    and the dark-theme one (tone 80) — and every other role is mixed from those
+    in oklab. Deriving instead of hand-listing ~100 hex values keeps a new
+    accent to one line, and oklab keeps mid-tones from going muddy the way an
+    sRGB mix does across a hue.                                               */
+
 :root {
-  /* surfaces — dark is the default */
-  --bg:        #000000;
-  --bg-el:     #0e0e10;   /* elevated backdrop (sheets, bars) */
-  --surface:   #1c1c1e;   /* card / grouped-list fill */
-  --surface-2: #2c2c2e;   /* pressed + nested fill */
-  --surface-3: #3a3a3c;   /* controls (segmented track, switch off) */
+  /* --- neutral base (dark is the default) --- */
+  --n-0:  #0a0a0b;
+  --n-4:  #121213;
+  --n-6:  #191a1b;
+  --n-10: #212223;
+  --n-12: #2a2b2c;
+  --n-17: #353637;
+  --n-90: #e5e2e0;
 
-  /* text */
-  --label:     #ffffff;
-  --label-2:   rgba(235,235,245,.60);
-  --label-3:   rgba(235,235,245,.32);
-  --label-4:   rgba(235,235,245,.18);
+  /* seed: the accent's two anchor tones. See the accent block further down. */
+  --seed-l: #99450a;   /* light-theme primary */
+  --seed-d: #ff9a4d;   /* dark-theme primary  */
 
-  /* lines */
-  --sep:       rgba(84,84,88,.60);
-  --sep-op:    rgba(84,84,88,.34);   /* for edges sitting over blur */
-  --hair:      .5px;
+  --prim:      var(--seed-d);
+  --on-prim:   #4a1f00;
+  --prim-c:    color-mix(in oklab, var(--seed-d) 26%, var(--n-10));
+  --on-prim-c: color-mix(in oklab, var(--seed-d) 88%, white);
 
-  /* system palette (iOS dark values) */
-  --blue:#0a84ff; --green:#30d158; --red:#ff453a; --orange:#ff9f0a;
-  --yellow:#ffd60a; --teal:#40c8e0; --indigo:#5e5ce6; --pink:#ff375f;
-  --purple:#bf5af2; --mint:#63e6e2; --brown:#ac8e68; --grey:#8e8e93;
+  /* the secondary container drives the nav indicator, filter chips, tonal buttons */
+  --sec-c:    color-mix(in oklab, var(--seed-d) 20%, var(--n-12));
+  --on-sec-c: color-mix(in oklab, var(--seed-d) 82%, var(--n-90));
 
-  /* accent (per-account, synced) */
-  --acc:  var(--green);
-  --acc-2:#248a3d;
-  --on-acc:#000000;
-  --acc-soft: color-mix(in srgb, var(--acc) 16%, transparent);
-  --acc-line: color-mix(in srgb, var(--acc) 38%, transparent);
+  /* surfaces — a tonal ramp, every step tinted with the accent hue */
+  --surf-dim:       color-mix(in oklab, var(--seed-d) 3%, var(--n-0));
+  --surf:           color-mix(in oklab, var(--seed-d) 3%, var(--n-4));
+  --surf-c-lowest:  color-mix(in oklab, var(--seed-d) 3%, var(--n-0));
+  --surf-c-low:     color-mix(in oklab, var(--seed-d) 4%, var(--n-6));
+  --surf-c:         color-mix(in oklab, var(--seed-d) 5%, var(--n-10));
+  --surf-c-high:    color-mix(in oklab, var(--seed-d) 6%, var(--n-12));
+  --surf-c-highest: color-mix(in oklab, var(--seed-d) 7%, var(--n-17));
 
-  /* geometry */
-  --r-sm:8px; --r:12px; --r-lg:16px; --r-xl:22px; --r-card:14px;
+  --on-surf:     #e6e2df;
+  --on-surf-var: #c5c0bc;
+  --outline:     #8e8985;
+  --outline-var: #45413e;
+
+  --inv-surf:    #e6e2df;
+  --inv-on-surf: #1a1a1b;
+  --inv-prim:    var(--seed-l);
+
+  --err:      #ffb4ab;
+  --on-err:   #690005;
+  --err-c:    #93000a;
+  --on-err-c: #ffdad6;
+
+  --scrim: rgba(0,0,0,.55);
+
+  /* status hues — restated per theme so a colour never carries the wrong tone */
+  --blue:#a8c8ff; --green:#8fdb8f; --red:#ffb4ab; --orange:#ffb868;
+  --yellow:#e8c65a; --teal:#4fd8e4; --indigo:#c5c0ff; --pink:#ffb1c0;
+  --purple:#d9b9ff; --mint:#7ce0c6; --brown:#dbc0a4; --grey:#8e8985;
+
+  /* ------------------------------------------------------------ shape --- */
+  --r-xs:4px; --r-sm:8px; --r:12px; --r-md:12px; --r-lg:16px;
+  --r-xl:28px; --r-2xl:36px; --r-full:999px;
+  --r-card:16px;
   --pad:16px;
-  --icon-stroke:1.7;
+  --icon-stroke:2;
+  --hair:1px;
 
-  /* motion */
-  --ease:cubic-bezier(.32,.72,0,1);
-  --fast:140ms; --med:220ms;
+  /* ----------------------------------------------------------- motion --- */
+  /* M3 easing. `emph` carries a component on or off screen; `std` is for a
+     property settling in place. */
+  --ease-emph:     cubic-bezier(.2,0,0,1);
+  --ease-emph-dec: cubic-bezier(.05,.7,.1,1);
+  --ease-emph-acc: cubic-bezier(.3,0,.8,.15);
+  --ease-std:      cubic-bezier(.2,0,0,1);
+  --ease: var(--ease-std);              /* legacy alias */
+  --fast:150ms; --med:250ms; --slow:400ms;
+
+  /* -------------------------------------------------------- elevation --- */
+  /* Dark M3 leans on the surface ramp; these shadows are only what a floating
+     element needs to detach from the page. */
+  --el-1: 0 1px 2px rgba(0,0,0,.30), 0 1px 3px 1px rgba(0,0,0,.15);
+  --el-2: 0 1px 2px rgba(0,0,0,.30), 0 2px 6px 2px rgba(0,0,0,.15);
+  --el-3: 0 4px 8px 3px rgba(0,0,0,.15), 0 1px 3px rgba(0,0,0,.30);
+  --el-4: 0 6px 10px 4px rgba(0,0,0,.15), 0 2px 3px rgba(0,0,0,.30);
 
   --sab:env(safe-area-inset-bottom,0px);
   --sat:env(safe-area-inset-top,0px);
+
+  /* ------------------------------------------------- LEGACY ALIASES ----- */
+  /* Referenced from inline styles in the views; mapping them here means the
+     JSX never needs to know which colour system is underneath. */
+  --bg:        var(--surf);
+  --bg-el:     var(--surf-c-low);
+  --surface:   var(--surf-c);
+  --surface-2: var(--surf-c-high);
+  --surface-3: var(--surf-c-highest);
+  --label:     var(--on-surf);
+  --label-2:   var(--on-surf-var);
+  --label-3:   color-mix(in oklab, var(--on-surf-var) 62%, transparent);
+  --label-4:   color-mix(in oklab, var(--on-surf-var) 34%, transparent);
+  --sep:       var(--outline-var);
+  --sep-op:    color-mix(in oklab, var(--outline-var) 70%, transparent);
+  --acc:       var(--prim);
+  --acc-2:     color-mix(in oklab, var(--prim) 80%, black);
+  --on-acc:    var(--on-prim);
+  --acc-soft:  var(--sec-c);
+  --acc-line:  color-mix(in oklab, var(--prim) 42%, transparent);
+
+  /* state-layer opacities, straight from the M3 spec */
+  --st-hover:.08; --st-focus:.10; --st-press:.10;
 }
 
+/* -------------------------------------------------------- light theme ---- */
 :root[data-theme="light"] {
-  --bg:        #f2f2f7;
-  --bg-el:     #f7f7fa;
-  --surface:   #ffffff;
-  --surface-2: #ececef;
-  --surface-3: #e3e3e8;
+  --n-0:  #ffffff;
+  --n-4:  #fcfbfa;
+  --n-6:  #f7f5f3;
+  --n-10: #f1efed;
+  --n-12: #ebe9e6;
+  --n-17: #e4e1de;
+  --n-90: #1a1a1b;
 
-  --label:     #000000;
-  --label-2:   rgba(60,60,67,.60);
-  --label-3:   rgba(60,60,67,.30);
-  --label-4:   rgba(60,60,67,.16);
+  --prim:      var(--seed-l);
+  --on-prim:   #ffffff;
+  --prim-c:    color-mix(in oklab, var(--seed-l) 22%, white);
+  --on-prim-c: color-mix(in oklab, var(--seed-l) 72%, black);
 
-  --sep:       rgba(60,60,67,.29);
-  --sep-op:    rgba(60,60,67,.20);
+  --sec-c:    color-mix(in oklab, var(--seed-l) 15%, var(--n-12));
+  --on-sec-c: color-mix(in oklab, var(--seed-l) 68%, black);
 
-  --blue:#007aff; --green:#34c759; --red:#ff3b30; --orange:#ff9500;
-  --yellow:#ffcc00; --teal:#30b0c7; --indigo:#5856d6; --pink:#ff2d55;
-  --purple:#af52de; --mint:#00c7be; --brown:#a2845e; --grey:#8e8e93;
-  --acc-2:#248a3d;
-  --on-acc:#ffffff;
+  --surf-dim:       color-mix(in oklab, var(--seed-l) 6%, #e0dedb);
+  --surf:           color-mix(in oklab, var(--seed-l) 3%, var(--n-4));
+  --surf-c-lowest:  #ffffff;
+  --surf-c-low:     color-mix(in oklab, var(--seed-l) 3%, var(--n-6));
+  --surf-c:         color-mix(in oklab, var(--seed-l) 4%, var(--n-10));
+  --surf-c-high:    color-mix(in oklab, var(--seed-l) 5%, var(--n-12));
+  --surf-c-highest: color-mix(in oklab, var(--seed-l) 6%, var(--n-17));
+
+  --on-surf:     #1a1a1b;
+  --on-surf-var: #4a4643;
+  --outline:     #7b7672;
+  --outline-var: #ccc7c3;
+
+  --inv-surf:    #2f2e2d;
+  --inv-on-surf: #f2f0ee;
+  --inv-prim:    var(--seed-d);
+
+  --err:      #ba1a1a;
+  --on-err:   #ffffff;
+  --err-c:    #ffdad6;
+  --on-err-c: #410002;
+
+  --scrim: rgba(0,0,0,.32);
+
+  --blue:#2f5da8; --green:#2f6b30; --red:#ba1a1a; --orange:#8b5000;
+  --yellow:#7a6300; --teal:#00696e; --indigo:#4b46a8; --pink:#8e4957;
+  --purple:#6b3fa0; --mint:#006b58; --brown:#7d5a3c; --grey:#7b7672;
+
+  --el-1: 0 1px 2px rgba(0,0,0,.10), 0 1px 3px 1px rgba(0,0,0,.07);
+  --el-2: 0 1px 2px rgba(0,0,0,.10), 0 2px 6px 2px rgba(0,0,0,.07);
+  --el-3: 0 4px 8px 3px rgba(0,0,0,.09), 0 1px 3px rgba(0,0,0,.10);
+  --el-4: 0 6px 10px 4px rgba(0,0,0,.09), 0 2px 3px rgba(0,0,0,.10);
+
+  --label-3: color-mix(in oklab, var(--on-surf-var) 56%, transparent);
+  --label-4: color-mix(in oklab, var(--on-surf-var) 28%, transparent);
 }
 
-/* accents — Apple's system colours, so a recolour never looks off-system */
-:root[data-accent="lime"]  { --acc:var(--green);  --acc-2:#248a3d; --on-acc:#000 }
-:root[data-accent="sky"]   { --acc:var(--blue);   --acc-2:#0060df; --on-acc:#fff }
-:root[data-accent="orange"]{ --acc:var(--orange); --acc-2:#c76b00; --on-acc:#000 }
-:root[data-accent="violet"]{ --acc:var(--purple); --acc-2:#8944ab; --on-acc:#fff }
-:root[data-accent="pink"]  { --acc:var(--pink);   --acc-2:#d70036; --on-acc:#fff }
-:root[data-accent="red"]   { --acc:var(--red);    --acc-2:#d70015; --on-acc:#fff }
-:root[data-accent="teal"]  { --acc:var(--teal);   --acc-2:#0071a4; --on-acc:#000 }
-:root[data-accent="gold"]  { --acc:var(--yellow); --acc-2:#b25000; --on-acc:#000 }
-/* Label colour on a filled accent button is picked per accent by measured contrast,
-   not by taste. Button text is 17px/600, so the AA bar is 3:1 (large text). White on
-   the light-theme green is 2.22:1 and on teal 2.57:1 — both fail, and green is the
-   DEFAULT accent, so every primary button in light mode was failing. Black scores
-   9.46 / 8.16 there. Blue, purple, pink and red keep white (3.5–4.1:1), which both
-   passes and matches the platform convention. */
-:root[data-theme="light"][data-accent="lime"],
-:root[data-theme="light"][data-accent="teal"]  { --on-acc:#000 }
-:root[data-theme="light"][data-accent="sky"],
-:root[data-theme="light"][data-accent="violet"],
-:root[data-theme="light"][data-accent="pink"],
-:root[data-theme="light"][data-accent="red"]   { --on-acc:#fff }
+/* --------------------------------------------------------- accents ------- */
+/*  Two tones per accent; every other role derives from them. The pairs are M3
+    tone-40 / tone-80, so the light theme's primary always carries white text
+    and the dark theme's always carries a dark on-colour — which is what removes
+    the per-accent contrast exceptions the previous sheet had to hand-tune.
+    `ember` is the brand default: a forge colour, for an app called Tempa.     */
+:root,
+:root[data-accent="ember"] { --seed-l:#99450a; --seed-d:#ff9a4d; --on-prim:#4a1f00 }
+:root[data-accent="lime"]  { --seed-l:#3d6a1f; --seed-d:#b4e37a; --on-prim:#1e3700 }
+:root[data-accent="sky"]   { --seed-l:#00629d; --seed-d:#9ccaff; --on-prim:#003355 }
+:root[data-accent="orange"]{ --seed-l:#8b5000; --seed-d:#ffb868; --on-prim:#4a2800 }
+:root[data-accent="violet"]{ --seed-l:#6750a4; --seed-d:#d0bcff; --on-prim:#381e72 }
+:root[data-accent="pink"]  { --seed-l:#984061; --seed-d:#ffb0c8; --on-prim:#5e1133 }
+:root[data-accent="red"]   { --seed-l:#a03a2f; --seed-d:#ffb4a6; --on-prim:#5f1508 }
+:root[data-accent="teal"]  { --seed-l:#00696e; --seed-d:#4fd8e4; --on-prim:#00363a }
+:root[data-accent="gold"]  { --seed-l:#725c00; --seed-d:#e9c400; --on-prim:#3b2f00 }
+/* In light mode primary is a tone-40, so white always clears 4.5:1 on it — the
+   dark-mode --on-prim above would be a contrast failure there. */
+:root[data-theme="light"] { --on-prim:#ffffff }
 
-/* ---------------------------------------------------------------- reset -- */
+/* ================================================================ RESET === */
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html{
-  font-size:16px;background:var(--bg);overscroll-behavior:none;overflow-x:clip;
+  font-size:16px;background:var(--surf);overscroll-behavior:none;overflow-x:clip;
   -webkit-text-size-adjust:100%;
 }
 body{
-  background:var(--bg);color:var(--label);
-  font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display','Segoe UI',Roboto,system-ui,sans-serif;
-  font-size:17px;line-height:1.29;letter-spacing:-.01em;
+  background:var(--surf);color:var(--on-surf);
+  /* Roboto first: it is the platform face on every Android device, so this costs
+     no bytes and never falls through to a substituted metric. */
+  font-family:Roboto,'Roboto Flex','Noto Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
+  font-size:16px;line-height:1.5;letter-spacing:.0088em;
   min-height:100vh;overscroll-behavior-y:none;overflow-x:clip;
   -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
   touch-action:manipulation;
   font-variant-numeric:tabular-nums;
 }
 button{font:inherit;color:inherit;background:none;border:none;cursor:pointer;letter-spacing:inherit}
-input,select,textarea{font:inherit;color:var(--label);letter-spacing:inherit}
+input,select,textarea{font:inherit;color:var(--on-surf);letter-spacing:inherit}
 img{max-width:100%}
-a{color:var(--acc);text-decoration:none}
+a{color:var(--prim);text-decoration:none}
 :focus{outline:none}
-:focus-visible{outline:2.5px solid var(--acc);outline-offset:2px;border-radius:6px}
+:focus-visible{outline:3px solid var(--prim);outline-offset:2px;border-radius:var(--r-sm)}
 button,.chip,.tile,.item,.wday,.cal-d,.swatch,.hm-c,.lrow,.seg button,.stp button,.sld
 {-webkit-user-select:none;user-select:none}
 
-/* icons inherit colour and optical size from their context */
 .icn{
   width:1em;height:1em;flex:none;display:block;
   fill:none;stroke:currentColor;stroke-width:var(--icon-stroke);
   stroke-linecap:round;stroke-linejoin:round;
 }
 
-@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+@media (prefers-reduced-motion: reduce){
+  *{animation-duration:.01ms!important;animation-iteration-count:1!important;
+    transition-duration:.01ms!important}
+}
 
-/* ------------------------------------------------------------ type scale -- */
-.t-large  {font-size:34px;line-height:1.06;font-weight:700;letter-spacing:-.028em}
-.t-title  {font-size:28px;line-height:1.12;font-weight:700;letter-spacing:-.024em}
-.t-title2 {font-size:22px;line-height:1.18;font-weight:700;letter-spacing:-.021em}
-.t-head   {font-size:17px;line-height:1.29;font-weight:600;letter-spacing:-.012em}
-.t-body   {font-size:17px;line-height:1.29;font-weight:400;letter-spacing:-.012em}
-.t-callout{font-size:16px;line-height:1.31;font-weight:400;letter-spacing:-.009em}
-.t-sub    {font-size:15px;line-height:1.33;font-weight:400;letter-spacing:-.006em}
-.t-foot   {font-size:13px;line-height:1.38;font-weight:400;letter-spacing:-.001em}
-.t-cap    {font-size:12px;line-height:1.33;font-weight:400;letter-spacing:0}
+/* ====================================================== RIPPLE / STATE ==== */
+/*  The ripple's origin comes from the delegated pointerdown listener in
+    lib/ripple.js, which writes --rx/--ry/--rs onto the pressed element. The
+    animation itself is here, so no component has to know about any of it.
 
-.muted{color:var(--label-2)} .dim{color:var(--label-3)}
-.small{font-size:13px;line-height:1.38}
-.accent{color:var(--acc)}
-.capitalize{text-transform:capitalize}
-/* exercise names and body-part/equipment terms arrive lowercase from the dataset,
-   so tags and chips capitalise by default. Anything that is a unit or a sentence opts
-   back out — blanket-capitalising turned "60 kg" into "60 Kg" and a whole hint into
-   Title Case. The compound selectors are needed: .tag/.chip come later in this file
-   and would otherwise win on source order. */
-.nocap,.tag.nocap,.chip.nocap{text-transform:none}
+    The circle lives on ::after and never on ::before, because ::before is
+    already spoken for on several of these — the filter chip's check, a list
+    row's divider, the nav item's active indicator. The selector list is the
+    same one ripple.js matches on; keep the two in step.
 
-/* ---------------------------------------------------------------- layout -- */
+    Deliberately absent: #fab and #tabbar button. The FAB already answers a
+    press with a state layer, and the nav item answers with its indicator
+    growing in — both would have to drop `overflow:hidden` to ripple, which
+    would cut off the pulse and the indicator respectively.                    */
+.rip,.btn,.item,.lrow.tap,.chip,.iconbtn,.wday,.cal-d,.glyph-cell,
+.stp button,.seg button,.tile.tappable,.today-row,.bw-pm{
+  position:relative;overflow:hidden;isolation:isolate;
+}
+.rip::after,.btn::after,.item::after,.lrow.tap::after,.chip::after,
+.iconbtn::after,.wday::after,.cal-d::after,.glyph-cell::after,
+.stp button::after,.seg button::after,.tile.tappable::after,
+.today-row::after,.bw-pm::after{
+  content:'';position:absolute;z-index:0;pointer-events:none;border-radius:50%;
+  left:var(--rx,50%);top:var(--ry,50%);
+  width:var(--rs,240px);height:var(--rs,240px);margin:calc(var(--rs,240px) / -2);
+  background:currentColor;opacity:0;transform:scale(0);
+}
+.rip:active::after,.btn:active::after,.item:active::after,
+.lrow.tap:active::after,.chip:active::after,.iconbtn:active::after,
+.wday:active::after,.cal-d:active::after,.glyph-cell:active::after,
+.stp button:active::after,.seg button:active::after,
+.tile.tappable:active::after,.today-row:active::after,.bw-pm:active::after{
+  animation:ripple var(--slow) var(--ease-emph-dec);
+}
+@keyframes ripple{
+  0%  {transform:scale(0);opacity:.14}
+  70% {opacity:.10}
+  100%{transform:scale(1);opacity:0}
+}
+/* a flat state layer for anything that opts in explicitly */
+.rip::before{
+  content:'';position:absolute;inset:0;z-index:0;pointer-events:none;
+  background:currentColor;opacity:0;transition:opacity var(--fast) linear;
+}
+.rip:active::before{opacity:var(--st-press)}
+/* the ripple must never paint over the control's own content */
+.rip>*{position:relative;z-index:1}
+
+/* =============================================================== LAYOUT === */
 #app{
-  padding:calc(var(--sat) + 8px) var(--pad) calc(128px + var(--sab));
+  /* bottom: nav bar (80) + its own safe area + breathing room past the FAB */
+  padding:calc(var(--sat) + 4px) var(--pad) calc(116px + var(--sab));
   max-width:560px;margin:0 auto;
 }
-/* while the rest timer floats above the tab bar, keep its height scrollable-past
-   (the rest variant is two rows tall — ~44px more than the single-row work timer) */
-body.resting #app{padding-bottom:calc(250px + var(--sab))}
-@keyframes viewfade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
-#app.vfade{animation:viewfade var(--med) var(--ease)}
+body.resting #app{padding-bottom:calc(248px + var(--sab))}
 
-/* large title, the way a nav bar does it */
-.hdr{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin:8px 0 18px}
-.hdr h1{font-size:34px;line-height:1.06;font-weight:700;letter-spacing:-.028em}
-.hdr .sub{color:var(--label-2);font-size:15px;letter-spacing:-.006em;margin-top:4px}
+/* M3 shared-axis: the incoming view rises and fades rather than sliding */
+@keyframes viewfade{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+#app.vfade{animation:viewfade var(--med) var(--ease-emph-dec)}
 
-.iconbtn{
-  width:36px;height:36px;border-radius:50%;flex:none;
-  background:var(--surface);color:var(--label);
-  display:flex;align-items:center;justify-content:center;font-size:18px;
-  transition:background var(--fast),transform var(--fast);
+/* ------------------------------------------------ large top app bar ------ */
+.hdr{
+  display:flex;align-items:flex-end;justify-content:space-between;gap:12px;
+  margin:12px 0 20px;
 }
-.iconbtn:active{background:var(--surface-2);transform:scale(.92)}
-.iconbtn.on-ss{background:var(--acc-soft);color:var(--acc)}
+/* M3 headline-large, and the letter-spacing goes to zero — the tight negative
+   tracking of the previous sheet is an SF Pro idiom that Roboto does not want. */
+.hdr h1{font-size:32px;line-height:1.25;font-weight:400;letter-spacing:0}
+.hdr .sub{
+  color:var(--on-surf-var);font-size:14px;line-height:1.43;
+  letter-spacing:.0178em;margin-top:4px;
+}
 
+/* M3 icon button: 40px painted, 48px reachable, circular state layer */
+.iconbtn{
+  width:40px;height:40px;border-radius:var(--r-full);flex:none;
+  background:none;color:var(--on-surf-var);
+  display:flex;align-items:center;justify-content:center;font-size:20px;
+  transition:background var(--fast),color var(--fast);
+  position:relative;overflow:hidden;isolation:isolate;
+}
+.iconbtn::before{
+  content:'';position:absolute;inset:0;background:currentColor;opacity:0;
+  transition:opacity var(--fast) linear;border-radius:inherit;
+}
+.iconbtn:active::before{opacity:var(--st-press)}
+.iconbtn:active{color:var(--on-surf)}
+.iconbtn .icn{position:relative;z-index:1}
+/* filled-tonal variant, for a toggled-on icon button */
+.iconbtn.on-ss{background:var(--sec-c);color:var(--on-sec-c)}
+
+/* ============================================================ TYPE SCALE == */
+/*  M3 names, mapped onto what the views already ask for. Roboto's metrics want
+    0 to +0.5% tracking; the old sheet's -2.8% is an SF Pro correction and makes
+    Roboto look cramped, so it is gone everywhere. */
+.t-large  {font-size:32px;line-height:1.25;font-weight:400;letter-spacing:0}
+.t-title  {font-size:28px;line-height:1.29;font-weight:400;letter-spacing:0}
+.t-title2 {font-size:22px;line-height:1.27;font-weight:400;letter-spacing:0}
+.t-head   {font-size:16px;line-height:1.5;font-weight:500;letter-spacing:.0094em}
+.t-body   {font-size:16px;line-height:1.5;font-weight:400;letter-spacing:.0313em}
+.t-callout{font-size:16px;line-height:1.5;font-weight:400;letter-spacing:.0313em}
+.t-sub    {font-size:14px;line-height:1.43;font-weight:400;letter-spacing:.0178em}
+.t-foot   {font-size:12px;line-height:1.33;font-weight:400;letter-spacing:.0333em}
+.t-cap    {font-size:11px;line-height:1.45;font-weight:500;letter-spacing:.0455em}
+
+.muted{color:var(--on-surf-var)} .dim{color:var(--label-3)}
+.small{font-size:13px;line-height:1.38;letter-spacing:.0192em}
+.accent{color:var(--prim)}
+.capitalize{text-transform:capitalize}
+/* Exercise names and body-part/equipment terms arrive lowercase from the
+   dataset, so tags and chips capitalise by default. Anything that is a unit or
+   a sentence opts back out — blanket-capitalising turned "60 kg" into "60 Kg".
+   The compound selectors are needed: .tag/.chip come later in this file and
+   would otherwise win on source order. */
+.nocap,.tag.nocap,.chip.nocap{text-transform:none}
+
+/* M3 section header: title-small, on-surface-variant, no shouting caps */
 h4.sec{
-  font-size:13px;font-weight:400;letter-spacing:-.004em;color:var(--label-2);
-  text-transform:none;margin:22px 0 8px;padding:0 4px;
+  font-size:14px;font-weight:500;letter-spacing:.0071em;color:var(--on-surf-var);
+  text-transform:none;margin:24px 0 10px;padding:0 4px;
 }
 .card h2{
-  font-size:13px;font-weight:400;letter-spacing:-.004em;color:var(--label-2);
+  font-size:14px;font-weight:500;letter-spacing:.0071em;color:var(--on-surf-var);
   text-transform:none;margin:0 0 12px;
 }
-.divider{height:var(--hair);background:var(--sep);margin:14px 0;border:0}
+.divider{height:var(--hair);background:var(--outline-var);margin:16px 0;border:0}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .row{display:flex;align-items:center;gap:12px}
 .row.between{justify-content:space-between}
 
-/* ----------------------------------------------------------------- card -- */
+/* ================================================================= CARD === */
 .card{
-  background:var(--surface);border-radius:var(--r-card);
+  background:var(--surf-c);border-radius:var(--r-card);
   padding:16px;margin-bottom:12px;
 }
-.card .big{font-size:30px;font-weight:600;letter-spacing:-.026em;line-height:1.1}
+.card .big{font-size:32px;font-weight:400;letter-spacing:0;line-height:1.2}
+.card.tappable{transition:background var(--fast)}
+.card.tappable:active{background:var(--surf-c-high)}
 
-/* ------------------------------------------------------ inset group list -- */
-.sect{margin-bottom:22px}
+/* ------------------------------------------------------- list container -- */
+/*  M3 replaces the iOS inset-grouped list: rows live on a `surface-container`
+    card and the hairline is gone unless the rows genuinely need dividing.     */
+.sect{margin-bottom:24px}
 .sect-t{
-  font-size:13px;font-weight:400;color:var(--label-2);
-  letter-spacing:-.004em;padding:0 4px 7px;display:block;
+  font-size:14px;font-weight:500;color:var(--on-surf-var);
+  letter-spacing:.0071em;padding:0 4px 8px;display:block;
 }
-.sect-b{background:var(--surface);border-radius:var(--r-card);overflow:hidden}
-.sect-f{font-size:13px;color:var(--label-2);padding:7px 4px 0;line-height:1.38}
+.sect-b{background:var(--surf-c);border-radius:var(--r-lg);overflow:hidden}
+.sect-f{
+  font-size:12px;color:var(--on-surf-var);padding:8px 6px 0;
+  line-height:1.33;letter-spacing:.0333em;
+}
 
+/* M3 two-line list item: 56/72px tall, 16px horizontal padding */
 .lrow{
-  display:flex;align-items:center;gap:12px;width:100%;text-align:left;
-  padding:11px 14px;min-height:46px;position:relative;color:var(--label);
+  display:flex;align-items:center;gap:16px;width:100%;text-align:left;
+  padding:12px 16px;min-height:56px;position:relative;color:var(--on-surf);
   background:none;
 }
-/* hairline starts after the icon rail so the list reads as one object */
 .lrow+.lrow::before{
-  content:'';position:absolute;left:14px;right:0;top:0;height:var(--hair);background:var(--sep);
+  content:'';position:absolute;left:16px;right:0;top:0;height:var(--hair);
+  background:var(--outline-var);
 }
-.lrow:has(.lrow-i)+.lrow:has(.lrow-i)::before{left:55px}
-.lrow.tap:active{background:var(--surface-2)}
+.lrow:has(.lrow-i)+.lrow:has(.lrow-i)::before{left:64px}
+.lrow.tap{transition:background var(--fast)}
+.lrow.tap:active{background:var(--surf-c-high)}
+/* the leading icon is a tonal container, not a saturated colour chip — a solid
+   white-on-accent square every 56px is the loudest thing on an M3 list */
 .lrow-i{
-  width:29px;height:29px;border-radius:7px;flex:none;font-size:18px;
+  width:32px;height:32px;border-radius:var(--r-sm);flex:none;font-size:19px;
   display:flex;align-items:center;justify-content:center;
-  background:var(--tint,var(--acc));color:#fff;
+  background:color-mix(in oklab, var(--tint,var(--prim)) 20%, var(--surf-c-high));
+  color:var(--tint,var(--prim));
 }
-.lrow-m{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
-.lrow-t{font-size:17px;letter-spacing:-.012em;line-height:1.25}
-.lrow-s{font-size:13px;color:var(--label-2);line-height:1.3}
-/* flex:none would let a long value ("Follow the routine (Linear progression)") run straight
-   through the title next to it, since the title's column is already free to shrink to nothing.
-   Letting the value shrink and ellipsise instead keeps the two out of each other's way. */
-.lrow-v{color:var(--label-2);font-size:17px;letter-spacing:-.012em;flex:0 1 auto;min-width:0;
-  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right}
-.lrow-c{color:var(--label);font-size:15px;flex:none;--icon-stroke:2.4}
-.lrow-k{color:var(--acc);font-size:17px;flex:none;--icon-stroke:2.4}
-.lrow.danger,.lrow.danger .lrow-t{color:var(--red)}
-/* an (i) before a row's control: painted small and dim so the control stays the loud thing,
-   but with a finger-sized target like everything else — the padding is the hit area and the
-   vertical negative margin keeps it from making the row taller. The horizontal ones pull the
-   hit area back under the row's own 12px gap instead of adding to it. */
+.lrow-m{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.lrow-t{font-size:16px;letter-spacing:.0313em;line-height:1.5}
+.lrow-s{font-size:14px;color:var(--on-surf-var);line-height:1.43;letter-spacing:.0178em}
+/* flex:none would let a long value run straight through the title next to it,
+   since the title's column is already free to shrink to nothing. Letting the
+   value shrink and ellipsise keeps the two out of each other's way. */
+.lrow-v{
+  color:var(--on-surf-var);font-size:14px;letter-spacing:.0178em;
+  flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;
+  white-space:nowrap;text-align:right;
+}
+.lrow-c{color:var(--on-surf-var);font-size:20px;flex:none;--icon-stroke:2}
+.lrow-k{color:var(--prim);font-size:20px;flex:none;--icon-stroke:2.4}
+.lrow.danger,.lrow.danger .lrow-t{color:var(--err)}
+/* an (i) before a row's control: painted small and dim so the control stays the
+   loud thing, but with a finger-sized target like everything else. The negative
+   margins keep the hit area from making the row taller or wider. */
 .helpbtn{
-  color:var(--label-3);font-size:16px;background:none;line-height:0;flex:none;
-  margin:-11px -2px -11px -4px;padding:11px 4px;
+  color:var(--label-3);font-size:18px;background:none;line-height:0;flex:none;
+  margin:-12px -2px -12px -6px;padding:12px 6px;
 }
-.helpbtn:active{color:var(--label)}
+.helpbtn:active{color:var(--on-surf)}
 
-/* -------------------------------------------------------------- buttons -- */
+/* ============================================================== BUTTONS === */
+/*  M3 common buttons: full pill, 40px tall, label-large, icon 18px. The press
+    response is a ripple, not a scale.                                        */
 .btn{
-  display:inline-flex;align-items:center;justify-content:center;gap:7px;width:100%;
-  padding:14px 18px;border-radius:var(--r);font-size:17px;font-weight:600;
-  letter-spacing:-.012em;background:var(--surface-2);color:var(--label);
-  transition:transform var(--fast) var(--ease),background var(--fast),opacity var(--fast);
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;width:100%;
+  min-height:48px;padding:12px 24px;border-radius:var(--r-full);
+  font-size:15px;font-weight:500;letter-spacing:.0071em;
+  background:var(--surf-c-high);color:var(--on-surf);
+  transition:background var(--fast),box-shadow var(--fast),opacity var(--fast);
+  position:relative;overflow:hidden;isolation:isolate;
 }
-.btn .icn{font-size:19px}
-.btn:active{transform:scale(.975)}
-.btn.primary{background:var(--acc);color:var(--on-acc)}
-.btn.primary:active{background:var(--acc-2)}
-.btn.tinted{background:var(--acc-soft);color:var(--acc)}
-.btn.danger{background:color-mix(in srgb,var(--red) 15%,transparent);color:var(--red)}
-.btn.ghost,.btn.plain{background:none;color:var(--acc);font-weight:400}
-.btn.ghost:active,.btn.plain:active{background:var(--surface-2)}
-.btn.sm{padding:8px 14px;width:auto;font-size:15px;border-radius:var(--r-sm);gap:5px}
-.btn.sm .icn{font-size:16px}
-.btn.xs{padding:5px 10px;width:auto;font-size:13px;border-radius:7px;gap:4px}
-.btn:disabled{opacity:.32;pointer-events:none}
+.btn::before{
+  content:'';position:absolute;inset:0;background:currentColor;opacity:0;
+  transition:opacity var(--fast) linear;
+}
+.btn:active::before{opacity:var(--st-press)}
+.btn>*{position:relative;z-index:1}
+.btn .icn{font-size:18px;--icon-stroke:2.1}
+/* filled — the one call to action on a screen */
+.btn.primary{background:var(--prim);color:var(--on-prim)}
+/* filled tonal — a secondary action that still needs to be findable */
+.btn.tinted{background:var(--sec-c);color:var(--on-sec-c)}
+.btn.danger{background:var(--err-c);color:var(--on-err-c)}
+/* text button — no container, so it needs its own padding rules */
+.btn.ghost,.btn.plain{background:none;color:var(--prim);padding:12px 16px}
+/* outlined, for a neutral action that must not read as disabled */
+.btn.outlined{background:none;color:var(--prim);box-shadow:inset 0 0 0 1px var(--outline)}
+.btn.sm{min-height:40px;padding:9px 16px;width:auto;font-size:14px;gap:6px}
+.btn.sm .icn{font-size:17px}
+.btn.xs{min-height:32px;padding:6px 12px;width:auto;font-size:13px;gap:5px}
+.btn.xs .icn{font-size:15px}
+.btn:disabled{
+  background:color-mix(in oklab, var(--on-surf) 12%, transparent);
+  color:var(--label-3);box-shadow:none;pointer-events:none;
+}
+.btn.ghost:disabled,.btn.plain:disabled{background:none}
 
-/* ----------------------------------------------------------- tab bar ----- */
+/* ======================================================= NAVIGATION BAR === */
+/*  M3 navigation bar: 80px, up to five destinations, each with a pill-shaped
+    active indicator behind the icon. "Start" is no longer a raised centre tab —
+    a primary action does not belong in a destination row — it is a FAB, which
+    is where an Android user reaches for it.                                   */
 #tabbar{
   position:fixed;left:0;right:0;bottom:0;z-index:50;
-  display:flex;justify-content:space-around;align-items:flex-end;
-  padding:7px 6px calc(6px + var(--sab));
-  background:color-mix(in srgb,var(--bg-el) 72%,transparent);
-  backdrop-filter:saturate(180%) blur(24px);-webkit-backdrop-filter:saturate(180%) blur(24px);
-  border-top:var(--hair) solid var(--sep-op);
+  display:flex;justify-content:space-around;align-items:stretch;
+  height:calc(80px + var(--sab));padding:12px 8px calc(16px + var(--sab));
+  background:var(--surf-c);
+  border-top:none;
 }
-:root[data-theme="light"] #tabbar{background:rgba(249,249,251,.78)}
 #tabbar button{
-  flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;
-  color:var(--label-3);font-size:10px;font-weight:500;letter-spacing:.005em;padding-top:3px;
-  transition:color var(--fast);
+  flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;
+  color:var(--on-surf-var);font-size:12px;font-weight:500;letter-spacing:.0417em;
+  padding:0;position:relative;transition:color var(--fast);
+  min-width:0;
 }
-/* The inactive tint is semi-transparent, so wherever two strokes cross inside an
-   icon (the calendar's hangers over its frame, the divider's caps on its sides)
-   the alpha doubled up and the icon read as a stack of loose layers. Carrying the
-   fade on the <svg> instead of in the stroke colour flattens the icon first and
-   fades it as one shape — and it does that for every icon, not just this one. */
-#tabbar button .icn{font-size:25px;--icon-stroke:1.65;color:var(--label)}
-#tabbar button.on{color:var(--acc)}
-#tabbar button.on .icn{--icon-stroke:2;color:inherit;opacity:1}
-#tabbar button.start{margin-top:-24px}
-#tabbar button.start .cir{
-  width:52px;height:52px;border-radius:50%;background:var(--acc);color:var(--on-acc);
-  display:flex;align-items:center;justify-content:center;position:relative;
-  box-shadow:0 6px 18px -4px color-mix(in srgb,var(--acc) 55%,transparent);
-  transition:transform var(--fast) var(--ease);
+/* the active indicator: a 64x32 pill that grows in behind the icon */
+#tabbar button .icn{
+  font-size:24px;--icon-stroke:1.9;position:relative;z-index:1;
+  transition:transform var(--med) var(--ease-emph);
 }
-#tabbar button.start:active .cir{transform:scale(.93)}
-#tabbar button.start .cir .icn{font-size:26px;--icon-stroke:2;color:inherit;opacity:1}
-#tabbar button.start span{color:var(--acc);font-weight:600}
-/* `.cir` is itself a <span>, so the label rules above and below reach it too and
-   outrank the `.cir` block — which is how the running state ended up painting an
-   orange play glyph onto an orange disc. Both states restate their own colour.
-   The disc is orange in either theme, so its glyph is black, not `--on-acc`. */
-#tabbar button.start .cir{color:var(--on-acc)}
-#tabbar button.start.rec .cir{background:var(--orange);color:#000;box-shadow:0 6px 18px -4px color-mix(in srgb,var(--orange) 55%,transparent)}
-#tabbar button.start.rec span{color:var(--orange)}
-#tabbar button.start.rec .cir::after{
-  content:'';position:absolute;inset:0;border-radius:50%;
-  border:2px solid var(--orange);animation:ping 1.9s var(--ease) infinite;
+#tabbar button::before{
+  content:'';position:absolute;top:-4px;left:50%;width:64px;height:32px;
+  border-radius:var(--r-full);background:var(--sec-c);
+  transform:translateX(-50%) scaleX(.3);opacity:0;
+  transition:transform var(--med) var(--ease-emph),opacity var(--fast) linear;
 }
-@keyframes ping{0%{transform:scale(1);opacity:.7}100%{transform:scale(1.45);opacity:0}}
+#tabbar button.on{color:var(--on-surf)}
+#tabbar button.on::before{transform:translateX(-50%) scaleX(1);opacity:1}
+#tabbar button.on .icn{--icon-stroke:2.3;color:var(--on-sec-c)}
+#tabbar button span{
+  position:relative;z-index:1;max-width:100%;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
 
-/* ------------------------------------------------------------ week strip -- */
+/* ----------------------------------------------------------------- FAB --- */
+/*  M3 FAB: a 56px rounded square (16px radius), not a circle — the squircle is
+    the current shape language and it is what tells an Android user this is the
+    screen's primary action. It extends into a labelled pill while a workout is
+    running, because "Resume" needs to say what it resumes.                    */
+#fab{
+  position:fixed;right:16px;bottom:calc(96px + var(--sab));z-index:55;
+  display:inline-flex;align-items:center;gap:12px;
+  height:56px;min-width:56px;padding:0 16px;
+  border-radius:var(--r-lg);background:var(--prim-c);color:var(--on-prim-c);
+  box-shadow:var(--el-3);
+  font-size:15px;font-weight:500;letter-spacing:.0071em;
+  transition:background var(--fast),box-shadow var(--fast),transform var(--med) var(--ease-emph);
+  position:fixed;overflow:hidden;isolation:isolate;
+  animation:fabin var(--med) var(--ease-emph-dec);
+}
+@keyframes fabin{from{transform:scale(.6);opacity:0}to{transform:none;opacity:1}}
+#fab::before{
+  content:'';position:absolute;inset:0;background:currentColor;opacity:0;
+  transition:opacity var(--fast) linear;
+}
+#fab:active::before{opacity:var(--st-press)}
+#fab:active{box-shadow:var(--el-1)}
+#fab>*{position:relative;z-index:1}
+#fab .icn{font-size:24px;--icon-stroke:2.1}
+/* running: tertiary-flavoured and gently breathing, so a glance across the room
+   tells you the session is still open */
+#fab.rec{
+  background:color-mix(in oklab, var(--orange) 26%, var(--surf-c));
+  color:var(--orange);
+}
+#fab.rec::after{
+  content:'';position:absolute;inset:0;border-radius:inherit;
+  box-shadow:0 0 0 0 color-mix(in oklab, var(--orange) 60%, transparent);
+  animation:fabpulse 2.4s var(--ease-emph) infinite;
+}
+@keyframes fabpulse{
+  0%{box-shadow:0 0 0 0 color-mix(in oklab, var(--orange) 55%, transparent)}
+  70%{box-shadow:0 0 0 14px transparent}
+  100%{box-shadow:0 0 0 0 transparent}
+}
+
+/* ========================================================== WEEK STRIP ==== */
 .week{display:flex;justify-content:space-between;gap:4px}
 .wday{
-  flex:1;text-align:center;padding:8px 2px 9px;border-radius:10px;
+  flex:1;text-align:center;padding:8px 2px 10px;border-radius:var(--r-md);
   background:none;border:none;transition:background var(--fast);
 }
-.wday .lbl{font-size:11px;color:var(--label-3);font-weight:500;text-transform:uppercase;letter-spacing:.03em}
-.wday .num{font-size:17px;font-weight:400;margin:4px 0;letter-spacing:-.012em}
-.wday .dot{width:5px;height:5px;border-radius:50%;background:transparent;margin:0 auto}
-.wday .dot.plan{background:var(--label-3)}
+.wday .lbl{
+  font-size:11px;color:var(--on-surf-var);font-weight:500;
+  text-transform:uppercase;letter-spacing:.0455em;
+}
+.wday .num{font-size:16px;font-weight:400;margin:6px 0 4px;letter-spacing:.0313em}
+.wday .dot{width:6px;height:6px;border-radius:50%;background:transparent;margin:0 auto}
+.wday .dot.plan{background:var(--outline)}
 .wday .dot.ovr{background:var(--orange)}
-.wday .dot.done{background:var(--acc)}
-.wday:active{background:var(--surface-2)}
+.wday .dot.done{background:var(--prim)}
+.wday:active{background:var(--surf-c-high)}
 .wday.today .num{
-  background:var(--acc);color:var(--on-acc);font-weight:600;
-  width:31px;height:31px;border-radius:50%;display:flex;align-items:center;
-  justify-content:center;margin:2px auto;
+  background:var(--prim);color:var(--on-prim);font-weight:500;
+  width:32px;height:32px;border-radius:50%;display:flex;align-items:center;
+  justify-content:center;margin:4px auto 2px;
 }
 
-/* ----------------------------------------------------------------- list -- */
+/* ================================================================= LIST === */
 .list{display:flex;flex-direction:column;gap:8px}
 .item{
-  display:flex;align-items:center;gap:12px;background:var(--surface);
-  border-radius:var(--r-card);padding:10px 12px;min-height:60px;
+  display:flex;align-items:center;gap:16px;background:var(--surf-c);
+  border-radius:var(--r-lg);padding:12px 16px;min-height:64px;
   transition:background var(--fast);text-align:left;width:100%;
 }
-.item:active{background:var(--surface-2)}
-.thumb{width:50px;height:50px;border-radius:9px;object-fit:cover;background:#fff;flex:none}
+.item:active{background:var(--surf-c-high)}
+.thumb{
+  width:52px;height:52px;border-radius:var(--r-md);object-fit:cover;
+  background:#fff;flex:none;
+}
 .thumb-x{
-  display:flex;align-items:center;justify-content:center;font-size:21px;
-  background:var(--surface-2);color:var(--label-2);
+  display:flex;align-items:center;justify-content:center;font-size:22px;
+  background:var(--surf-c-high);color:var(--on-surf-var);
 }
-.item .tt{font-size:16px;font-weight:400;line-height:1.25;letter-spacing:-.009em}
-.item .ss{color:var(--label-2);font-size:13px;margin-top:2px}
+.item .tt{font-size:16px;font-weight:400;line-height:1.5;letter-spacing:.0313em}
+.item .ss{
+  color:var(--on-surf-var);font-size:14px;margin-top:1px;
+  line-height:1.43;letter-spacing:.0178em;
+}
 .item .grow{flex:1;min-width:0}
-.chev{color:var(--label);flex:none;font-size:15px;--icon-stroke:2.4}
-.tag{
-  display:inline-flex;align-items:center;gap:3px;background:var(--surface-2);
-  color:var(--label-2);border-radius:6px;padding:3px 7px;font-size:12px;
-  font-weight:500;text-transform:capitalize;
-}
-.tag.acc{background:var(--acc-soft);color:var(--acc)}
+.chev{color:var(--on-surf-var);flex:none;font-size:20px;--icon-stroke:2}
 
-/* ---------------------------------------------------------------- chips -- */
+/* M3 doesn't have a "tag", but its assist chip is the closest thing, so these
+   borrow its shape and tonal fill at a smaller size. */
+.tag{
+  display:inline-flex;align-items:center;gap:4px;background:var(--surf-c-high);
+  color:var(--on-surf-var);border-radius:var(--r-sm);padding:4px 8px;
+  font-size:12px;font-weight:500;letter-spacing:.0333em;text-transform:capitalize;
+}
+.tag.acc{background:var(--sec-c);color:var(--on-sec-c)}
+.tag .icn{font-size:14px}
+
+/* ================================================================ CHIPS === */
+/*  M3 filter chip: outlined when off, secondary-container filled when on, and
+    the selected one grows a leading check. 32px tall, full pill.              */
 .chips{
-  display:flex;gap:7px;overflow-x:auto;padding-bottom:2px;
+  display:flex;gap:8px;overflow-x:auto;padding:2px 0 4px;
   scrollbar-width:none;-webkit-overflow-scrolling:touch;
 }
 .chips::-webkit-scrollbar{display:none}
 .chip{
-  flex:none;padding:6px 13px;border-radius:99px;background:var(--surface);
-  font-size:14px;font-weight:400;color:var(--label);text-transform:capitalize;
-  letter-spacing:-.006em;transition:background var(--fast),color var(--fast);
+  flex:none;min-height:32px;padding:6px 16px;border-radius:var(--r-sm);
+  background:none;box-shadow:inset 0 0 0 1px var(--outline-var);
+  font-size:14px;font-weight:500;color:var(--on-surf-var);
+  text-transform:capitalize;letter-spacing:.0071em;
+  display:inline-flex;align-items:center;gap:6px;
+  transition:background var(--fast),color var(--fast),box-shadow var(--fast);
 }
-.chip:active{background:var(--surface-2)}
-.chip.on{background:var(--acc);color:var(--on-acc);font-weight:500}
+.chip:active{background:var(--surf-c-high)}
+.chip.on{
+  background:var(--sec-c);color:var(--on-sec-c);box-shadow:none;font-weight:500;
+}
+/* the check is drawn in CSS so no view has to add an icon to stay in spec */
+.chip.on::before{
+  content:'';width:16px;height:16px;flex:none;
+  background:currentColor;
+  -webkit-mask:var(--check-mask) center/contain no-repeat;
+  mask:var(--check-mask) center/contain no-repeat;
+}
+:root{
+  --check-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='none' stroke='%23000' stroke-width='3' stroke-linecap='round' stroke-linejoin='round' d='m5 13 4 4 10-10'/%3E%3C/svg%3E");
+}
 
-/* =========================== CONTROLS ==================================== */
+/* ============================================================== CONTROLS == */
 
-/* --- text field --- */
+/* ------------------------------------------------------------ text field - */
+/*  M3 filled text field: rounded top corners, a bottom indicator that thickens
+    and turns primary on focus. Distinctly Android, and it gives the field a
+    baseline the iOS all-round box never had.                                  */
 .field,.input{
-  width:100%;background:var(--surface);border:none;border-radius:var(--r);
-  padding:13px 15px;font-size:17px;letter-spacing:-.012em;outline:none;
-  transition:box-shadow var(--fast);
+  width:100%;background:var(--surf-c-high);border:none;
+  border-radius:var(--r-xs) var(--r-xs) 0 0;
+  padding:16px;font-size:16px;letter-spacing:.0313em;outline:none;
+  box-shadow:inset 0 -1px 0 0 var(--on-surf-var);
+  transition:box-shadow var(--fast),background var(--fast);
 }
 .field::placeholder,.input::placeholder{color:var(--label-3)}
-.field:focus,.input:focus{box-shadow:inset 0 0 0 2px var(--acc)}
-.field.area,textarea.input{min-height:92px;resize:vertical;line-height:1.42}
+.field:focus,.input:focus{box-shadow:inset 0 -2px 0 0 var(--prim)}
+.field.area,textarea.input{min-height:96px;resize:vertical;line-height:1.5}
 .exnote{
-  background:var(--surface);border-radius:var(--r);padding:13px 15px;
-  line-height:1.45;white-space:pre-wrap;font-size:15px;margin-bottom:10px;color:var(--label-2);
+  background:var(--surf-c);border-radius:var(--r-md);padding:14px 16px;
+  line-height:1.5;white-space:pre-wrap;font-size:14px;margin-bottom:10px;
+  color:var(--on-surf-var);letter-spacing:.0178em;
 }
 
-/* --- search field --- */
+/* -------------------------------------------------------- search field --- */
+/*  M3 search bar: a full pill on `surface-container-high`, no bottom indicator
+    — search is a container, not an input field.                               */
 .searchf{position:relative;display:flex;align-items:center}
 .searchf .lead{
-  position:absolute;left:11px;font-size:16px;color:var(--label-3);
-  pointer-events:none;--icon-stroke:2.1;z-index:1;
+  position:absolute;left:16px;font-size:20px;color:var(--on-surf-var);
+  pointer-events:none;--icon-stroke:2;z-index:1;
 }
-.searchf .field{padding-left:35px;padding-right:36px;background:var(--surface-2);border-radius:10px}
-:root[data-theme="light"] .searchf .field{background:rgba(118,118,128,.12)}
+.searchf .field{
+  padding:14px 48px;background:var(--surf-c-high);
+  border-radius:var(--r-full);box-shadow:none;
+}
+.searchf .field:focus{box-shadow:inset 0 0 0 2px var(--prim)}
 .searchf .clear{
-  position:absolute;right:8px;width:22px;height:22px;border-radius:50%;
-  background:var(--label-3);color:var(--bg);display:flex;align-items:center;
-  justify-content:center;font-size:11px;--icon-stroke:3;
+  position:absolute;right:8px;width:36px;height:36px;border-radius:50%;
+  background:none;color:var(--on-surf-var);display:flex;align-items:center;
+  justify-content:center;font-size:18px;--icon-stroke:2.2;
 }
-/* legacy .search wrapper */
+.searchf .clear:active{background:var(--surf-c-highest)}
+/* legacy .search wrapper (Library) — same treatment */
 .search{position:relative}
-.search .input{padding-left:35px;background:var(--surface-2);border-radius:10px}
-:root[data-theme="light"] .search .input{background:rgba(118,118,128,.12)}
+.search .input{
+  padding-left:48px;background:var(--surf-c-high);
+  border-radius:var(--r-full);box-shadow:none;
+}
+.search .input:focus{box-shadow:inset 0 0 0 2px var(--prim)}
 .search>svg{
-  position:absolute;left:11px;top:50%;transform:translateY(-50%);z-index:1;
-  width:16px;height:16px;stroke:var(--label-3);fill:none;stroke-width:2.1;stroke-linecap:round;
+  position:absolute;left:16px;top:50%;transform:translateY(-50%);z-index:1;
+  width:20px;height:20px;stroke:var(--on-surf-var);fill:none;stroke-width:2;
+  stroke-linecap:round;
 }
 
-/* --- switch --- */
+/* ------------------------------------------------------------- switch ---- */
+/*  M3 switch: 52x32 track with a 1px outline when off, a 16px thumb that grows
+    to 24px when on, and a check inside the thumb. The outline-when-off is what
+    stops it reading as "greyed out" — the single most-reported confusion with
+    an unstyled toggle.                                                        */
 .sw{
-  width:51px;height:31px;border-radius:99px;background:var(--surface-3);
-  flex:none;padding:2px;display:flex;align-items:center;
-  transition:background var(--med) var(--ease);
+  width:52px;height:32px;border-radius:var(--r-full);background:var(--surf-c-highest);
+  box-shadow:inset 0 0 0 2px var(--outline);
+  flex:none;padding:0;display:flex;align-items:center;position:relative;
+  transition:background var(--med) var(--ease-emph),box-shadow var(--med) var(--ease-emph);
 }
 .sw .knob{
-  width:27px;height:27px;border-radius:50%;background:#fff;
-  box-shadow:0 3px 8px rgba(0,0,0,.15),0 1px 1px rgba(0,0,0,.16);
-  transition:transform var(--med) var(--ease),width var(--fast) var(--ease);
+  position:absolute;left:8px;width:16px;height:16px;border-radius:50%;
+  background:var(--outline);color:transparent;
+  display:flex;align-items:center;justify-content:center;
+  transition:transform var(--med) var(--ease-emph),width var(--med) var(--ease-emph),
+             height var(--med) var(--ease-emph),left var(--med) var(--ease-emph),
+             background var(--med) var(--ease-emph);
 }
-.sw.on{background:var(--acc)}
-.sw.on .knob{transform:translateX(20px)}
-.sw:active .knob{width:31px}
-.sw.on:active .knob{transform:translateX(16px)}
-.sw:disabled{opacity:.4}
+.sw.on{background:var(--prim);box-shadow:inset 0 0 0 2px var(--prim)}
+.sw.on .knob{
+  width:24px;height:24px;left:4px;transform:translateX(20px);
+  background:var(--on-prim);
+}
+/* the tick inside the thumb, drawn from the same mask as the filter chip */
+.sw.on .knob::after{
+  content:'';width:14px;height:14px;background:var(--prim);
+  -webkit-mask:var(--check-mask) center/contain no-repeat;
+  mask:var(--check-mask) center/contain no-repeat;
+}
+.sw:active .knob{width:28px;height:28px}
+.sw:not(.on):active .knob{left:2px}
+.sw.on:active .knob{left:2px;transform:translateX(20px)}
+.sw:disabled{opacity:.38}
 
-/* --- segmented control --- */
-/* flex, not grid: an absolutely-positioned child of a GRID container is placed
-   into a grid area, so the sliding thumb resolved top/bottom against the wrong
-   box and overflowed the track. A flex container leaves abspos children on the
-   padding box, which is what the thumb needs. */
+/* -------------------------------------------------- segmented button ----- */
+/*  M3 segmented button: one outlined container, dividers between segments, and
+    the selected cell filled with secondary-container. There is no sliding
+    thumb in M3 — the fill moves instantly and the check animates in, which is
+    also more legible when you are picking between four things mid-workout.    */
 .seg{
   position:relative;display:flex;
-  background:var(--surface-3);border-radius:9px;padding:2px;isolation:isolate;
+  background:none;box-shadow:inset 0 0 0 1px var(--outline);
+  border-radius:var(--r-full);padding:0;isolation:isolate;overflow:hidden;
 }
 .seg>button{flex:1 1 0;min-width:0}
-:root[data-theme="light"] .seg{background:rgba(118,118,128,.12)}
-.seg-sel{
-  position:absolute;z-index:0;top:2px;bottom:2px;left:2px;
-  width:calc((100% - 4px)/var(--n));
-  transform:translateX(calc(100% * var(--i)));
-  background:var(--surface);border-radius:7px;
-  box-shadow:0 3px 8px rgba(0,0,0,.12),0 1px 1px rgba(0,0,0,.06);
-  transition:transform var(--med) var(--ease);
-}
-:root[data-theme="light"] .seg-sel{background:#fff}
+/* the old sliding thumb is kept in the markup by <Segmented>; hide it rather
+   than touch every caller */
+.seg-sel{display:none}
 .seg button{
-  position:relative;z-index:1;padding:6px 8px;font-size:14px;font-weight:500;
-  letter-spacing:-.006em;color:var(--label);display:flex;align-items:center;
-  justify-content:center;gap:5px;min-height:30px;transition:opacity var(--fast);
+  position:relative;z-index:1;padding:9px 12px;font-size:14px;font-weight:500;
+  letter-spacing:.0071em;color:var(--on-surf-var);display:flex;
+  align-items:center;justify-content:center;gap:6px;min-height:40px;
+  transition:background var(--fast),color var(--fast);
 }
-.seg button .icn{font-size:16px}
-.seg button:not(.on){color:var(--label-2);font-weight:400}
-.seg button:active{opacity:.5}
+.seg button+button{box-shadow:inset 1px 0 0 0 var(--outline)}
+.seg button .icn{font-size:18px}
+.seg button.on{background:var(--sec-c);color:var(--on-sec-c)}
+.seg button:active{background:var(--surf-c-high)}
+.seg button.on:active{background:color-mix(in oklab, var(--on-sec-c) 10%, var(--sec-c))}
 /* sitting in a list row: shrink to content instead of filling the row */
-.seg-inline{flex:none;min-width:132px}
-.seg-range{margin-bottom:10px}
-.seg-inline button{padding:5px 10px;font-size:13px;min-height:28px}
-.seg-inline button .icn{font-size:14px}
+.seg-inline{flex:none;min-width:136px}
+.seg-range{margin-bottom:12px}
+.seg-inline button{padding:7px 12px;font-size:13px;min-height:36px}
+.seg-inline button .icn{font-size:16px}
 
-/* native time input, restyled to sit in a row like a value label */
+/* native time input, restyled to sit in a row like a value */
 .timef{
-  background:var(--surface-2);border:none;border-radius:8px;padding:6px 10px;
-  font-size:16px;color:var(--label);outline:none;font-variant-numeric:tabular-nums;
+  background:var(--surf-c-high);border:none;border-radius:var(--r-sm);
+  padding:8px 12px;font-size:16px;color:var(--on-surf);outline:none;
+  font-variant-numeric:tabular-nums;
 }
-.timef::-webkit-calendar-picker-indicator{filter:invert(.5)}
+.timef::-webkit-calendar-picker-indicator{filter:invert(.6)}
 :root[data-theme="light"] .timef::-webkit-calendar-picker-indicator{filter:none}
 
-/* --- stepper --- */
-.stp-w{display:flex;flex-direction:column;gap:6px;min-width:0}
-.stp-l{font-size:13px;color:var(--label-2);text-align:center}
+/* ------------------------------------------------------------ stepper ---- */
+/*  Not an M3 component, so it is assembled from ones that are: a tonal
+    container with two icon buttons and a centred value. Buttons are 48px tall,
+    because this is the control you use with chalk on your hands.              */
+.stp-w{display:flex;flex-direction:column;gap:8px;min-width:0}
+.stp-l{
+  font-size:12px;color:var(--on-surf-var);text-align:center;
+  letter-spacing:.0333em;
+}
 .stp{
-  display:flex;align-items:center;background:var(--surface-2);
-  border-radius:10px;overflow:hidden;min-width:0;
+  display:flex;align-items:center;background:var(--surf-c-high);
+  border-radius:var(--r-full);overflow:hidden;min-width:0;
 }
 .stp button{
-  width:40px;height:44px;flex:none;color:var(--label);font-size:16px;
+  width:44px;height:48px;flex:none;color:var(--on-surf-var);font-size:18px;
   display:flex;align-items:center;justify-content:center;
-  transition:background var(--fast);--icon-stroke:2.2;
+  transition:background var(--fast),color var(--fast);--icon-stroke:2.4;
 }
-.stp button:active{background:var(--surface-3)}
+.stp button:active{background:var(--surf-c-highest);color:var(--on-surf)}
 .stp .val{
-  flex:1;min-width:0;display:flex;align-items:baseline;justify-content:center;gap:3px;padding:0 2px;
+  flex:1;min-width:0;display:flex;align-items:baseline;justify-content:center;
+  gap:3px;padding:0 2px;
 }
-.stp .val i{font-style:normal;font-size:12px;color:var(--label-2);flex:none}
+.stp .val i{font-style:normal;font-size:12px;color:var(--on-surf-var);flex:none}
 .stp .num{
-  width:100%;min-width:0;text-align:center;background:none;border:none;outline:none;
-  font-size:17px;font-weight:500;letter-spacing:-.012em;padding:0;
+  width:100%;min-width:0;text-align:center;background:none;border:none;
+  outline:none;box-shadow:none;padding:0;
+  font-size:18px;font-weight:500;letter-spacing:0;
   -moz-appearance:textfield;appearance:textfield;
 }
 .stp .num::-webkit-inner-spin-button{display:none}
 
-/* --- slider --- */
-.sld{position:relative;height:32px;display:flex;align-items:center;cursor:pointer;touch-action:none}
+/* ------------------------------------------------------------- slider ---- */
+/*  M3 Expressive slider: a thick track, a gap between the active and inactive
+    halves, and a bar-shaped handle rather than a circle. The bar is the current
+    shape and it is far easier to see where the value sits mid-drag.           */
+.sld{
+  position:relative;height:44px;display:flex;align-items:center;
+  cursor:pointer;touch-action:none;
+}
 .sld-track{
-  position:absolute;left:0;right:0;height:6px;border-radius:99px;
-  background:var(--surface-3);overflow:hidden;
+  position:absolute;left:0;right:0;height:16px;border-radius:var(--r-sm);
+  background:var(--surf-c-highest);overflow:visible;
 }
-.sld-fill{display:block;height:100%;background:var(--acc);border-radius:99px}
+.sld-fill{
+  display:block;height:100%;background:var(--prim);
+  border-radius:var(--r-sm) var(--r-xs) var(--r-xs) var(--r-sm);
+}
 .sld-knob{
-  position:absolute;width:26px;height:26px;border-radius:50%;background:#fff;
-  transform:translateX(-50%);
-  box-shadow:0 4px 10px rgba(0,0,0,.22),0 1px 2px rgba(0,0,0,.16);
-  transition:transform var(--fast) var(--ease);
+  position:absolute;width:4px;height:44px;border-radius:var(--r-xs);
+  background:var(--prim);transform:translateX(-50%);
+  box-shadow:0 0 0 6px var(--surf);
+  transition:width var(--fast) var(--ease-emph),height var(--fast) var(--ease-emph);
 }
-.sld.dragging .sld-knob{transform:translateX(-50%) scale(1.14)}
+.sld.dragging .sld-knob{width:2px;height:52px}
 
-/* --- checkbox --- */
+/* ----------------------------------------------------------- checkbox ---- */
+/*  M3 checkbox is a rounded square, and the set-completion control in a workout
+    is exactly a checkbox, so it is one here too. The painted box is 20px; the
+    button around it stays finger-sized.                                       */
 .chk,.ck{
-  width:30px;height:30px;border-radius:50%;flex:none;
+  width:44px;height:44px;border-radius:50%;flex:none;
   display:flex;align-items:center;justify-content:center;
-  background:none;box-shadow:inset 0 0 0 1.8px var(--label-4);color:transparent;
-  transition:background var(--fast),box-shadow var(--fast),color var(--fast),transform var(--fast);
+  background:none;color:transparent;position:relative;
+  transition:background var(--fast);
 }
-.chk .icn{font-size:16px;--icon-stroke:2.6}
-.chk.on{background:var(--acc);box-shadow:none;color:var(--on-acc)}
-.chk:active,.ck:active{transform:scale(.9)}
+.chk::before,.ck::before{
+  content:'';position:absolute;width:20px;height:20px;border-radius:var(--r-xs);
+  box-shadow:inset 0 0 0 2px var(--on-surf-var);background:transparent;
+  transition:background var(--fast),box-shadow var(--fast);
+}
+.chk .icn{font-size:15px;--icon-stroke:3;position:relative;z-index:1}
+.chk.on{color:var(--on-prim)}
+.chk.on::before,.ck.on::before{background:var(--prim);box-shadow:none}
+.chk:active,.ck:active{background:color-mix(in oklab, var(--on-surf) 10%, transparent)}
 .ck svg{
-  width:16px;height:16px;stroke:transparent;fill:none;stroke-width:2.6;
-  stroke-linecap:round;stroke-linejoin:round;transition:stroke var(--fast);
+  width:15px;height:15px;stroke:transparent;fill:none;stroke-width:3;
+  stroke-linecap:round;stroke-linejoin:round;position:relative;z-index:1;
+  transition:stroke var(--fast);
 }
-.ck.on{background:var(--acc);box-shadow:none}
-.ck.on svg{stroke:var(--on-acc)}
+.ck.on svg{stroke:var(--on-prim)}
 
-/* ------------------------------------------------------------- workout --- */
-.wprog{height:4px;background:var(--surface-2);border-radius:99px;overflow:hidden;margin-bottom:16px}
-.wprog i{display:block;height:100%;background:var(--acc);border-radius:99px;transition:width var(--med) var(--ease)}
-.exmedia{position:relative;border-radius:var(--r-lg);overflow:hidden;background:#fff;margin-bottom:12px}
-.exmedia img{width:100%;height:320px;object-fit:contain;display:block}
-.exmedia .gifhint,.exmedia .giftoggle{
-  position:absolute;bottom:9px;display:inline-flex;align-items:center;gap:4px;
-  background:rgba(0,0,0,.45);color:#fff;border-radius:99px;padding:5px 11px;
-  font-size:12px;font-weight:500;
-  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+/* ============================================================== WORKOUT === */
+.wprog{
+  height:8px;background:var(--surf-c-high);border-radius:var(--r-xs);
+  overflow:hidden;margin-bottom:18px;display:flex;
 }
-.exmedia .gifhint{right:9px}
-.exmedia .giftoggle{left:9px}
-.exmedia .gifhint .icn,.exmedia .giftoggle .icn{font-size:13px}
-/* superset: both exercises are on screen together, so the animations have to give way —
-   at 180px you had to scroll a full screen between two exercises done back-to-back */
+/* M3 progress indicators leave a gap between the filled part and the track */
+.wprog i{
+  display:block;height:100%;background:var(--prim);border-radius:var(--r-xs);
+  transition:width var(--med) var(--ease-emph);
+  box-shadow:4px 0 0 0 var(--surf-c);
+}
+.exmedia{
+  position:relative;border-radius:var(--r-lg);overflow:hidden;background:#fff;
+  margin-bottom:14px;
+}
+.exmedia img{width:100%;height:300px;object-fit:contain;display:block}
+.exmedia .gifhint,.exmedia .giftoggle{
+  position:absolute;bottom:10px;display:inline-flex;align-items:center;gap:6px;
+  background:color-mix(in oklab, var(--inv-surf) 92%, transparent);
+  color:var(--inv-on-surf);
+  border-radius:var(--r-sm);padding:6px 12px;font-size:12px;font-weight:500;
+  letter-spacing:.0333em;
+}
+.exmedia .gifhint{right:10px}
+.exmedia .giftoggle{left:10px}
+.exmedia .gifhint .icn,.exmedia .giftoggle .icn{font-size:14px}
+/* superset: both exercises are on screen together, so the animations give way */
 .exmedia.compact img{height:120px}
 .exmedia.mini img{height:84px}
 
 .sethead{
-  display:flex;align-items:center;gap:8px;padding:0 0 6px;
-  font-size:11px;color:var(--label-3);font-weight:500;text-transform:uppercase;letter-spacing:.045em;
+  display:flex;align-items:center;gap:8px;padding:0 0 8px;
+  font-size:11px;color:var(--on-surf-var);font-weight:500;
+  text-transform:uppercase;letter-spacing:.0455em;
 }
-.sethead .n-sp{width:24px;flex:none}
+.sethead .n-sp{width:28px;flex:none}
 .sethead .w-sp{flex:1.4;text-align:center}
 .sethead .r-sp{flex:1;text-align:center}
 .sethead .eff-sp{text-align:center}
-.sethead .ck-sp{width:30px;flex:none}
-.setrow{display:flex;align-items:center;gap:8px;padding:7px 0;position:relative}
-.setrow+.setrow::before{
-  content:'';position:absolute;left:32px;right:0;top:0;height:var(--hair);background:var(--sep);
-}
+.sethead .ck-sp{width:44px;flex:none}
+.setrow{display:flex;align-items:center;gap:8px;padding:5px 0;position:relative}
 .setrow .n{
-  width:24px;height:24px;border-radius:50%;background:var(--surface-2);color:var(--label-2);
-  display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:500;flex:none;
+  width:28px;height:28px;border-radius:var(--r-sm);background:var(--surf-c-high);
+  color:var(--on-surf-var);display:flex;align-items:center;justify-content:center;
+  font-size:13px;font-weight:500;flex:none;
   transition:background var(--fast),color var(--fast);
 }
 .setrow .stp.w{flex:1.4;min-width:0}
 .setrow .stp.r{flex:1;min-width:0}
 .setrow .stp.eff{flex:1.1;min-width:0}
-.setrow .stp button{width:32px;height:40px}
-/* a 3rd stepper (RIR) needs narrower buttons and a tighter row gap to fit next to weight+reps
-   on narrow phones, same technique as the exercise-config sheet's three-steppers-in-a-row
-   (.cfgrow below) — RIR's own value is short ("1.5") so its buttons shrink the most, weight/reps
-   just enough to make room since their values ("82.5", "12") need more of what's left.
-   The header shares the numbers so its labels stay centred over the steppers they name. */
-.setrow.eff3,.sethead.eff3{gap:6px}
+.setrow .stp button{width:36px;height:44px}
+/* a 3rd stepper (RIR/RPE) needs narrower buttons and a tighter row gap to fit
+   next to weight+reps on a narrow phone. RIR's own value is short ("1.5") so its
+   buttons shrink the most; weight and reps just enough to make room, since
+   "82.5" and "12" need more of what is left. The header shares the numbers so
+   its labels stay centred over the steppers they name. */
+.setrow.eff3,.sethead.eff3{gap:5px}
 .setrow.eff3 .stp.w,.sethead.eff3 .w-sp{flex:1.2}
 .setrow.eff3 .stp.r,.sethead.eff3 .r-sp{flex:1}
 .setrow.eff3 .stp.eff,.sethead.eff3 .eff-sp{flex:.85}
-.setrow.eff3 .stp button{width:23px}
-.setrow.eff3 .stp.eff button{width:20px}
-.setrow.eff3 .stp .num{font-size:14px}
-.setrow.done .n{background:var(--acc);color:var(--on-acc)}
-.setrow.done{opacity:.45}
-/* why the next target is what it is (issue #17) */
+.setrow.eff3 .stp button{width:26px}
+.setrow.eff3 .stp.eff button{width:22px}
+.setrow.eff3 .stp .num{font-size:15px}
+.setrow.eff3 .chk,.setrow.eff3 .ck{width:36px}
+.setrow.eff3 .sethead .ck-sp{width:36px}
+/* A finished set steps down a tone instead of fading out — at .45 opacity the
+   numbers you just logged became unreadable, which is the one thing you look
+   back at between sets. */
+.setrow.done .n{background:var(--prim);color:var(--on-prim)}
+.setrow.done .stp{background:var(--surf-c-low)}
+.setrow.done .stp .num,.setrow.done .stp button{color:var(--on-surf-var)}
+/* why the next target is what it is */
 .progline{
-  display:flex;align-items:flex-start;gap:7px;margin:6px 0 2px;
-  font-size:13px;line-height:1.38;color:var(--acc);
+  display:flex;align-items:flex-start;gap:8px;margin:8px 0 4px;
+  padding:10px 12px;border-radius:var(--r-md);
+  background:var(--sec-c);color:var(--on-sec-c);
+  font-size:13px;line-height:1.4;letter-spacing:.0192em;
 }
-.progline.warn{color:var(--yellow)}
-.progline svg{flex:none;margin-top:2px}
+.progline.warn{
+  background:color-mix(in oklab, var(--yellow) 20%, var(--surf-c));
+  color:var(--yellow);
+}
+.progline svg{flex:none;margin-top:2px;font-size:16px}
 
-/* start a timed set (issue #16) — sits where you'd otherwise reach for the checkbox */
+/* start a timed set — sits where you'd otherwise reach for the checkbox */
 .setrow .setgo{
-  width:30px;height:30px;border-radius:50%;flex:none;
+  width:44px;height:44px;border-radius:50%;flex:none;
   display:flex;align-items:center;justify-content:center;
-  background:var(--surface-2);color:var(--acc);font-size:14px;
+  background:none;color:var(--prim);font-size:18px;position:relative;
   transition:background var(--fast),opacity var(--fast);
 }
-.setrow .setgo:disabled{opacity:.3;cursor:default}
-.setrow .setgo:not(:disabled):active{background:var(--surface-3)}
+.setrow .setgo::before{
+  content:'';position:absolute;width:32px;height:32px;border-radius:50%;
+  background:var(--sec-c);
+}
+.setrow .setgo .icn{position:relative;z-index:1}
+.setrow .setgo:disabled{opacity:.38;cursor:default}
+.setrow .setgo:not(:disabled):active{background:color-mix(in oklab, var(--on-surf) 10%, transparent)}
 /* exercise-config sheet: three steppers side by side on narrow phones */
 .cfgrow{gap:8px}
 .cfgrow>div{flex:1;min-width:0}
-.cfgrow .stp button{width:30px}
+.cfgrow .stp button{width:32px}
 .cfgrow .stp-l{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
-/* --- rest timer --- */
+/* ---------------------------------------------------------- rest timer --- */
 #timer{
-  position:fixed;left:12px;right:12px;bottom:calc(88px + var(--sab));z-index:60;
-  /* nearly opaque: the set rows underneath were reading through the old 82% and made the
-     clock hard to pick out mid-set. The blur stays, so it still sits above the page. */
-  background:color-mix(in srgb,var(--surface) 97%,transparent);
-  backdrop-filter:saturate(180%) blur(24px);-webkit-backdrop-filter:saturate(180%) blur(24px);
-  border-radius:var(--r-lg);padding:12px 14px;
-  display:flex;align-items:center;gap:12px;
-  box-shadow:0 12px 34px -8px rgba(0,0,0,.55);
-  animation:slideup var(--med) var(--ease);
+  position:fixed;left:12px;right:12px;bottom:calc(96px + var(--sab));z-index:60;
+  background:var(--surf-c-highest);
+  border-radius:var(--r-lg);padding:14px 16px;
+  display:flex;align-items:center;gap:14px;
+  box-shadow:var(--el-3);
+  animation:slideup var(--med) var(--ease-emph-dec);
 }
-@keyframes slideup{from{transform:translateY(16px);opacity:0}to{transform:none;opacity:1}}
-#timer .t{font-size:26px;font-weight:600;letter-spacing:-.026em;font-variant-numeric:tabular-nums;min-width:66px}
-#timer .bar{flex:1;height:4px;background:var(--surface-3);border-radius:99px;overflow:hidden}
-#timer .bar i{display:block;height:100%;background:var(--acc);transition:width 1s linear}
-/* rest variant: −15/+15/Skip and the clock won't share one line on a phone, so the clock and
-   bar take the top row and the controls take their own. The work timer keeps a single row —
-   it only ever has two buttons. */
-#timer.rest{flex-direction:column;align-items:stretch;gap:10px}
-#timer.rest .head{display:flex;align-items:center;gap:12px}
+@keyframes slideup{from{transform:translateY(24px);opacity:0}to{transform:none;opacity:1}}
+#timer .t{
+  font-size:28px;font-weight:400;letter-spacing:0;
+  font-variant-numeric:tabular-nums;min-width:72px;
+}
+#timer .bar{
+  flex:1;height:8px;background:var(--surf-c-low);border-radius:var(--r-xs);
+  overflow:hidden;
+}
+#timer .bar i{display:block;height:100%;background:var(--prim);border-radius:var(--r-xs);transition:width 1s linear}
+/* rest variant: −15/+15/Skip and the clock won't share one line on a phone, so
+   the clock and bar take the top row and the controls take their own. */
+#timer.rest{flex-direction:column;align-items:stretch;gap:12px}
+#timer.rest .head{display:flex;align-items:center;gap:14px}
 #timer.rest .acts{display:flex;align-items:center;gap:8px}
-#timer.rest .acts .btn{padding-top:11px;padding-bottom:11px}   /* sweaty hands, mid-set */
-#timer.rest .acts .skip{margin-left:auto;min-width:84px}
-/* work timer (issue #16): the same bar doing the opposite job — outlined and tinted so a
+#timer.rest .acts .skip{margin-left:auto;min-width:92px}
+/* work timer: the same bar doing the opposite job — outlined and tinted so a
    glance tells "you are holding this" apart from "you are recovering". */
-#timer.working{border:var(--hair) solid var(--acc)}
-#timer.working .t{color:var(--acc)}
+#timer.working{box-shadow:var(--el-3),inset 0 0 0 2px var(--prim)}
+#timer.working .t{color:var(--prim)}
 #timer.working .grow{flex:1;min-width:0}
 #timer.working .lbl{
-  font-size:12px;color:var(--label-2);margin-bottom:5px;text-transform:capitalize;
+  font-size:12px;color:var(--on-surf-var);margin-bottom:6px;
+  text-transform:capitalize;letter-spacing:.0333em;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
 
-/* ---------------------------------------------------------------- modal -- */
+/* ==================================================== SHEETS & DIALOGS ==== */
 #modal-root{position:fixed;inset:0;z-index:100;display:none}
 #modal-root.open{display:block}
 .mback{
-  position:absolute;inset:0;background:rgba(0,0,0,.4);
-  backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);
+  position:absolute;inset:0;background:var(--scrim);
   touch-action:none;overscroll-behavior:none;
+  animation:scrimin var(--med) linear;
 }
+@keyframes scrimin{from{opacity:0}to{opacity:1}}
+/* M3 bottom sheet: 28px top corners, surface-container-low, a drag handle */
 .sheet{
-  position:absolute;left:0;right:0;bottom:0;background:var(--bg-el);
+  position:absolute;left:0;right:0;bottom:0;background:var(--surf-c-low);
   border-radius:var(--r-xl) var(--r-xl) 0 0;
-  padding:8px 18px calc(20px + var(--sab));
-  max-height:90vh;overflow-y:auto;-webkit-overflow-scrolling:touch;
-  animation:sheetup .34s var(--ease);
+  padding:0 20px calc(24px + var(--sab));
+  max-height:92vh;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  animation:sheetup var(--slow) var(--ease-emph-dec);
   overscroll-behavior:contain;touch-action:pan-y;will-change:transform;
 }
-:root[data-theme="light"] .sheet{background:var(--bg)}
 @keyframes sheetup{from{transform:translateY(100%)}to{transform:none}}
-.sheet .grab{width:36px;height:5px;border-radius:99px;background:var(--label-4);margin:6px auto 14px}
-.sheet h3{font-size:20px;font-weight:600;letter-spacing:-.021em;margin-bottom:14px}
+.sheet .grab{
+  width:32px;height:4px;border-radius:var(--r-full);
+  background:var(--on-surf-var);opacity:.4;margin:16px auto 12px;
+}
+.sheet h3{
+  font-size:22px;font-weight:400;letter-spacing:0;margin:8px 0 16px;
+  line-height:1.27;
+}
+/* M3 dialog: 28px radius, surface-container-high, generous padding */
 .center{
   position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
-  width:min(84vw,300px);background:var(--bg-el);border-radius:var(--r-lg);padding:20px;
-  box-shadow:0 20px 60px -12px rgba(0,0,0,.5);
-  animation:pop .28s var(--ease);
+  width:min(88vw,312px);background:var(--surf-c-high);
+  border-radius:var(--r-xl);padding:24px;
+  box-shadow:var(--el-3);
+  animation:pop var(--med) var(--ease-emph-dec);
 }
-:root[data-theme="light"] .center{background:#fff}
-@keyframes pop{from{transform:translate(-50%,-50%) scale(.94);opacity:0}to{transform:translate(-50%,-50%) scale(1);opacity:1}}
+@keyframes pop{
+  from{transform:translate(-50%,-50%) scale(.85);opacity:0}
+  to{transform:translate(-50%,-50%) scale(1);opacity:1}
+}
 
-/* --- RIR/RPE conversion table (effort help sheet) ---
-   The two scales only click when you see them side by side, so the numbers get fixed-width
-   tabular columns you can read straight down, and the words take whatever is left. Built out
-   of the same grouped-list parts as the rest of the app (surface fill, inset hairlines) rather
-   than a real <table>, so it inherits the card look and wraps properly on a narrow phone. */
-.efftbl{background:var(--surface);border-radius:var(--r-lg);overflow:hidden;margin:14px 0 12px}
-.efftbl .r{display:flex;align-items:center;gap:10px;padding:10px 14px;position:relative}
+/* ------------------------------- RIR/RPE conversion table (effort help) --- */
+/*  The two scales only click when you see them side by side, so the numbers get
+    fixed-width tabular columns you can read straight down, and the words take
+    whatever is left. Built out of the same container parts as the rest of the
+    app rather than a real <table>, so it wraps properly on a narrow phone.    */
+.efftbl{background:var(--surf-c);border-radius:var(--r-lg);overflow:hidden;margin:16px 0 12px}
+.efftbl .r{display:flex;align-items:center;gap:12px;padding:11px 16px;position:relative}
 .efftbl .r+.r::before{
-  content:'';position:absolute;left:14px;right:0;top:0;height:var(--hair);background:var(--sep);
+  content:'';position:absolute;left:16px;right:0;top:0;height:var(--hair);
+  background:var(--outline-var);
 }
 .efftbl .n{
-  width:36px;flex:none;text-align:center;font-size:17px;font-weight:600;
-  letter-spacing:-.02em;font-variant-numeric:tabular-nums;
+  width:38px;flex:none;text-align:center;font-size:16px;font-weight:500;
+  letter-spacing:0;font-variant-numeric:tabular-nums;
 }
-.efftbl .f{flex:1;min-width:0;font-size:15px;color:var(--label-2);line-height:1.3}
-/* the header names the columns without competing with them */
-.efftbl .hd{background:var(--surface-2);padding-top:8px;padding-bottom:8px}
+.efftbl .f{flex:1;min-width:0;font-size:14px;color:var(--on-surf-var);line-height:1.43}
+.efftbl .hd{background:var(--surf-c-high);padding-top:9px;padding-bottom:9px}
 .efftbl .hd .n,.efftbl .hd .f{
-  font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;
-  color:var(--label-3);
+  font-size:11px;font-weight:500;letter-spacing:.0455em;text-transform:uppercase;
+  color:var(--on-surf-var);
 }
 /* the row a working set usually lands on — the anchor the others are read against */
-.efftbl .r.on{background:var(--acc-soft)}
-.efftbl .r.on .n{color:var(--acc)}
-.efftbl .r.on .f{color:var(--label)}
+.efftbl .r.on{background:var(--sec-c)}
+.efftbl .r.on .n{color:var(--on-sec-c)}
+.efftbl .r.on .f{color:var(--on-sec-c)}
 
-/* --- glyph picker (replaces the emoji grid) --- */
-.glyph-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:9px}
+/* ------------------------------------------------------- glyph picker ---- */
+.glyph-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
 .glyph-cell{
-  aspect-ratio:1;border-radius:13px;background:var(--surface);
-  display:flex;align-items:center;justify-content:center;font-size:24px;
-  color:var(--label);transition:background var(--fast),color var(--fast),transform var(--fast);
+  aspect-ratio:1;border-radius:var(--r-lg);background:var(--surf-c);
+  display:flex;align-items:center;justify-content:center;font-size:26px;
+  color:var(--on-surf-var);
+  transition:background var(--fast),color var(--fast);
 }
-.glyph-cell:active{transform:scale(.92)}
-.glyph-cell.on{background:var(--acc);color:var(--on-acc)}
+.glyph-cell:active{background:var(--surf-c-highest)}
+.glyph-cell.on{background:var(--sec-c);color:var(--on-sec-c)}
 
-/* --- big weight readout --- */
-.bwstep{display:flex;align-items:center;justify-content:center;gap:18px;margin:14px 0 6px}
+/* ---------------------------------------------------- big weight readout - */
+.bwstep{display:flex;align-items:center;justify-content:center;gap:20px;margin:16px 0 8px}
 .bw-pm{
-  width:46px;height:46px;border-radius:50%;background:var(--surface);flex:none;
-  color:var(--label);display:flex;align-items:center;justify-content:center;font-size:19px;
-  transition:background var(--fast),transform var(--fast);--icon-stroke:2.2;
+  width:56px;height:56px;border-radius:var(--r-lg);background:var(--surf-c-high);
+  flex:none;color:var(--on-surf);display:flex;align-items:center;
+  justify-content:center;font-size:22px;
+  transition:background var(--fast);--icon-stroke:2.4;
 }
-.bw-pm:active{background:var(--surface-2);transform:scale(.92)}
+.bw-pm:active{background:var(--surf-c-highest)}
 .bw-read{
-  font-size:52px;font-weight:600;letter-spacing:-.035em;min-width:158px;text-align:center;
-  font-variant-numeric:tabular-nums;line-height:1;
+  font-size:57px;font-weight:400;letter-spacing:-.0044em;min-width:170px;
+  text-align:center;font-variant-numeric:tabular-nums;line-height:1.12;
 }
-.bw-read .u{font-size:19px;color:var(--label-2);font-weight:400;letter-spacing:-.01em}
-.bwin{display:flex;align-items:baseline;justify-content:center;gap:7px;margin:16px 0}
+.bw-read .u{font-size:20px;color:var(--on-surf-var);font-weight:400;letter-spacing:0}
+.bwin{display:flex;align-items:baseline;justify-content:center;gap:8px;margin:18px 0}
 .bwin input{
-  width:150px;background:none;border:none;outline:none;text-align:right;
-  font-size:52px;font-weight:600;letter-spacing:-.035em;color:var(--label);
+  width:160px;background:none;border:none;outline:none;box-shadow:none;
+  text-align:right;padding:0;
+  font-size:57px;font-weight:400;letter-spacing:-.0044em;color:var(--on-surf);
 }
-.bwin span{color:var(--label-2);font-size:19px}
+.bwin span{color:var(--on-surf-var);font-size:20px}
 
-/* --------------------------------------------------------------- charts -- */
+/* =============================================================== CHARTS === */
 .chart{width:100%;overflow:hidden}
 .chart svg{display:block;width:100%;height:auto}
 .chart-i{position:relative;touch-action:pan-y}
-/* left/top are written by LineChart after measuring the label, so it can never be
-   pushed under the `.chart` clip at either edge — hence no offset here. */
+/* left/top are written by LineChart after measuring the label, so it can never
+   be pushed under the `.chart` clip at either edge — hence no offset here. */
 .ctip{
-  position:absolute;left:0;top:0;background:var(--surface-2);
-  border-radius:8px;padding:4px 10px;font-size:12px;font-weight:500;white-space:nowrap;
+  position:absolute;left:0;top:0;background:var(--inv-surf);color:var(--inv-on-surf);
+  border-radius:var(--r-xs);padding:5px 10px;font-size:12px;font-weight:500;
+  white-space:nowrap;letter-spacing:.0333em;
   max-width:calc(100% - 8px);overflow:hidden;text-overflow:ellipsis;
-  pointer-events:none;box-shadow:0 6px 18px -4px rgba(0,0,0,.4);
+  pointer-events:none;box-shadow:var(--el-2);
 }
 
-/* --- activity heatmap --- */
+/* ------------------------------------------------------ activity heatmap - */
 .hm-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:2px}
 .hm-wrap::-webkit-scrollbar{display:none}
-.hm-months{display:flex;margin-left:28px;margin-bottom:5px}
-.hm-months span{flex:none;width:14px;font-size:11px;color:var(--label-3);white-space:nowrap;overflow:visible}
+.hm-months{display:flex;margin-left:28px;margin-bottom:6px}
+.hm-months span{flex:none;width:14px;font-size:11px;color:var(--on-surf-var);white-space:nowrap;overflow:visible}
 .hm-body{display:flex}
 .hm-days{display:flex;flex-direction:column;gap:3px;flex:none;width:28px}
-.hm-days span{height:11px;font-size:10px;color:var(--label-2);line-height:11px}
+.hm-days span{height:11px;font-size:10px;color:var(--on-surf-var);line-height:11px}
 .hm-grid{display:flex;gap:3px}
 .hm-col{display:flex;flex-direction:column;gap:3px}
-.hm-c{width:11px;height:11px;border-radius:3px;background:var(--surface-2);flex:none}
-.hm-c.l1{background:color-mix(in srgb,var(--acc) 30%,var(--surface-2))}
-.hm-c.l2{background:color-mix(in srgb,var(--acc) 55%,var(--surface-2))}
-.hm-c.l3{background:color-mix(in srgb,var(--acc) 78%,var(--surface-2))}
-.hm-c.l4{background:var(--acc)}
-.hm-c.today{box-shadow:0 0 0 1.5px var(--acc)}
+.hm-c{width:11px;height:11px;border-radius:var(--r-xs);background:var(--surf-c-high);flex:none}
+.hm-c.l1{background:color-mix(in oklab, var(--prim) 30%, var(--surf-c-high))}
+.hm-c.l2{background:color-mix(in oklab, var(--prim) 55%, var(--surf-c-high))}
+.hm-c.l3{background:color-mix(in oklab, var(--prim) 78%, var(--surf-c-high))}
+.hm-c.l4{background:var(--prim)}
+.hm-c.today{box-shadow:0 0 0 2px var(--on-surf)}
 .hm-c.future{opacity:.3}
 .hm-legend{
-  display:flex;align-items:center;gap:4px;justify-content:flex-end;margin-top:9px;
-  font-size:11px;color:var(--label-3);
+  display:flex;align-items:center;gap:4px;justify-content:flex-end;margin-top:10px;
+  font-size:11px;color:var(--on-surf-var);
 }
 .hm-legend .hm-c{width:10px;height:10px}
 
-/* --- muscle map --- */
-/* Reuses the .hm-c level ramp above, so one accent scale means one thing app-wide. */
-/* An untrained muscle is derived from the text colour rather than a fixed surface, so
-   the body keeps the same contrast in both themes — pinned to --surface-2 it was all
-   but invisible on a white card. */
+/* ---------------------------------------------------------- muscle map --- */
+/* Reuses the .hm-c level ramp above, so one accent scale means one thing
+   app-wide. An untrained muscle is derived from the text colour rather than a
+   fixed surface, so the body keeps its contrast in both themes. */
 .bodymap{
   display:flex;gap:6px;justify-content:center;align-items:flex-start;
-  --bm-base:color-mix(in srgb,var(--label) 11%,var(--surface));
+  --bm-base:color-mix(in oklab, var(--on-surf) 12%, var(--surf-c));
 }
 .bm-v{flex:1;min-width:0;height:auto;max-height:min(46vh,340px)}
-.bm-ph{height:200px}                       /* holds the space while the geometry loads */
-.bm-sil{fill:color-mix(in srgb,var(--label) 18%,var(--surface))}
-.bm-m{fill:var(--bm-base);transition:fill var(--med) var(--ease)}
-.bm-m.l1{fill:color-mix(in srgb,var(--acc) 32%,var(--bm-base))}
-.bm-m.l2{fill:color-mix(in srgb,var(--acc) 56%,var(--bm-base))}
-.bm-m.l3{fill:color-mix(in srgb,var(--acc) 78%,var(--bm-base))}
-.bm-m.l4{fill:var(--acc)}
-.bm-m.sel{stroke:var(--label);stroke-width:7}
+.bm-ph{height:200px}
+.bm-sil{fill:color-mix(in oklab, var(--on-surf) 18%, var(--surf-c))}
+.bm-m{fill:var(--bm-base);transition:fill var(--med) var(--ease-emph)}
+.bm-m.l1{fill:color-mix(in oklab, var(--prim) 32%, var(--bm-base))}
+.bm-m.l2{fill:color-mix(in oklab, var(--prim) 56%, var(--bm-base))}
+.bm-m.l3{fill:color-mix(in oklab, var(--prim) 78%, var(--bm-base))}
+.bm-m.l4{fill:var(--prim)}
+.bm-m.sel{stroke:var(--on-surf);stroke-width:7}
 .bodymap.tappable .bm-m{cursor:pointer}
-/* A hairline in the surface colour separates neighbouring muscles; the artwork has no
-   outline path of its own, so without this the body reads as one flat blob. */
-.bm-v path{stroke:var(--surface);stroke-width:2.5;stroke-linejoin:round}
+/* A hairline in the surface colour separates neighbouring muscles; the artwork
+   has no outline path of its own, so without this the body reads as one blob. */
+.bm-v path{stroke:var(--surf-c);stroke-width:2.5;stroke-linejoin:round}
 
-.mrow{display:flex;align-items:center;gap:9px;padding:5px 0}
+.mrow{display:flex;align-items:center;gap:10px;padding:6px 0}
 .mrow .nm{flex:1;min-width:0;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.mrow .bar{width:74px;height:5px;border-radius:3px;background:var(--surface-2);flex:none;overflow:hidden}
-.mrow .bar i{display:block;height:100%;background:var(--acc);border-radius:3px}
-.mrow .v{font-size:12px;color:var(--label-2);min-width:52px;text-align:right;flex:none}
-/* A headline number inside a card — tile weight without a tile around it, for the pair of
-   readings at the top of the effort card. */
-.stat-v{font-size:26px;font-weight:600;letter-spacing:-.026em;line-height:1.1}
-.mchips{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
-.mchip{font-size:12px;padding:4px 9px;border-radius:99px;background:var(--surface-2);color:var(--label-2)}
-.mchip.miss{background:color-mix(in srgb,var(--orange) 16%,transparent);color:var(--orange)}
+.mrow .bar{width:76px;height:8px;border-radius:var(--r-xs);background:var(--surf-c-high);flex:none;overflow:hidden}
+.mrow .bar i{display:block;height:100%;background:var(--prim);border-radius:var(--r-xs)}
+.mrow .v{font-size:12px;color:var(--on-surf-var);min-width:54px;text-align:right;flex:none}
+.stat-v{font-size:28px;font-weight:400;letter-spacing:0;line-height:1.25}
+.mchips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.mchip{
+  font-size:12px;padding:5px 10px;border-radius:var(--r-sm);
+  background:var(--surf-c-high);color:var(--on-surf-var);letter-spacing:.0333em;
+}
+.mchip.miss{background:color-mix(in oklab, var(--orange) 20%, var(--surf-c));color:var(--orange)}
 
-/* --- stat tiles --- */
+/* --------------------------------------------------------- stat tiles ---- */
 .tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
-.tile{background:var(--surface);border-radius:var(--r-card);padding:14px}
+.tile{background:var(--surf-c);border-radius:var(--r-lg);padding:16px}
 .tile .l{
-  color:var(--label-2);font-size:13px;font-weight:400;letter-spacing:-.004em;
-  text-transform:none;display:flex;align-items:center;gap:5px;
+  color:var(--on-surf-var);font-size:13px;font-weight:400;letter-spacing:.0192em;
+  text-transform:none;display:flex;align-items:center;gap:6px;
 }
-.tile .l .icn{font-size:14px;color:var(--label)}
-.tile .v{font-size:26px;font-weight:600;letter-spacing:-.026em;margin-top:5px;line-height:1.1}
-.tile.tappable:active{background:var(--surface-2)}
+.tile .l .icn{font-size:16px;color:var(--on-surf-var)}
+.tile .v{font-size:28px;font-weight:400;letter-spacing:0;margin-top:6px;line-height:1.25}
+.tile.tappable{transition:background var(--fast)}
+.tile.tappable:active{background:var(--surf-c-high)}
 
-/* --- PR badge --- */
+/* ----------------------------------------------------------- PR badge ---- */
 .pr{
-  display:inline-flex;align-items:center;gap:4px;
-  background:color-mix(in srgb,var(--yellow) 18%,transparent);color:var(--yellow);
-  border-radius:6px;padding:3px 8px;font-size:12px;font-weight:500;
+  display:inline-flex;align-items:center;gap:5px;
+  background:color-mix(in oklab, var(--yellow) 22%, var(--surf-c));color:var(--yellow);
+  border-radius:var(--r-sm);padding:4px 10px;font-size:12px;font-weight:500;
+  letter-spacing:.0333em;
 }
-.pr .icn{font-size:13px}
+.pr .icn{font-size:14px}
 
-/* --- toast --- */
+/* ------------------------------------------------------------ snackbar --- */
+/*  M3 snackbar: inverse surface, 4px radius (not a pill — a pill is a chip),
+    left-aligned, and it clears the FAB.                                       */
 #toast{
-  position:fixed;left:50%;transform:translateX(-50%) translateY(6px);
-  bottom:calc(96px + var(--sab));z-index:200;
-  background:color-mix(in srgb,var(--surface-2) 88%,transparent);
-  backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);
-  border-radius:99px;padding:11px 20px;font-size:15px;font-weight:500;
-  box-shadow:0 10px 30px -6px rgba(0,0,0,.5);
-  opacity:0;pointer-events:none;transition:opacity var(--med),transform var(--med) var(--ease);
-  max-width:88vw;text-align:center;
+  position:fixed;left:16px;right:16px;
+  bottom:calc(168px + var(--sab));z-index:200;
+  background:var(--inv-surf);color:var(--inv-on-surf);
+  border-radius:var(--r-xs);padding:14px 16px;font-size:14px;font-weight:400;
+  letter-spacing:.0178em;line-height:1.43;
+  box-shadow:var(--el-3);
+  opacity:0;pointer-events:none;transform:translateY(12px) scale(.96);
+  transition:opacity var(--med) linear,transform var(--med) var(--ease-emph-dec);
+  max-width:min(560px,calc(100vw - 32px));margin:0 auto;text-align:left;
 }
-#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+#toast.show{opacity:1;transform:none}
 
-/* ---------------------------------------------------------------- misc --- */
-.empty{text-align:center;color:var(--label-2);padding:44px 20px;font-size:15px;line-height:1.45}
-.empty .ico{font-size:34px;color:var(--label-2);margin-bottom:12px;display:flex;justify-content:center}
+/* ================================================================= MISC === */
+/*  M3 empty state: the illustration sits in a tonal container, so an empty
+    screen still looks composed rather than unfinished.                        */
+.empty{
+  text-align:center;color:var(--on-surf-var);padding:40px 24px;
+  font-size:14px;line-height:1.5;letter-spacing:.0178em;
+}
+.empty .ico{
+  width:72px;height:72px;border-radius:var(--r-xl);margin:0 auto 16px;
+  background:var(--surf-c-high);color:var(--on-surf-var);
+  font-size:32px;display:flex;align-items:center;justify-content:center;
+}
 .steps-list{
-  padding-left:18px;color:var(--label-2);font-size:15px;line-height:1.5;
-  display:flex;flex-direction:column;gap:9px;
+  padding-left:20px;color:var(--on-surf-var);font-size:15px;line-height:1.6;
+  display:flex;flex-direction:column;gap:10px;letter-spacing:.0178em;
 }
-.steps-list::marker{color:var(--label-3)}
+.steps-list::marker{color:var(--prim);font-weight:500}
 
-/* --- month calendar --- */
-.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-top:10px}
-.cal-h{text-align:center;font-size:11px;color:var(--label-3);font-weight:500;text-transform:uppercase;padding:2px 0}
+/* --------------------------------------------------------- month calendar */
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-top:12px}
+.cal-h{
+  text-align:center;font-size:11px;color:var(--on-surf-var);font-weight:500;
+  text-transform:uppercase;padding:2px 0;letter-spacing:.0455em;
+}
 .cal-d{
-  aspect-ratio:1;border-radius:10px;background:var(--surface);
+  aspect-ratio:1;border-radius:var(--r-md);background:var(--surf-c);
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
-  font-weight:400;font-size:15px;color:var(--label);transition:background var(--fast);
+  font-weight:400;font-size:15px;color:var(--on-surf);transition:background var(--fast);
 }
-.cal-d:active{background:var(--surface-2)}
-.cal-d.has{background:var(--acc-soft);color:var(--acc)}
-.cal-d.today{box-shadow:inset 0 0 0 1.8px var(--acc)}
+.cal-d:active{background:var(--surf-c-highest)}
+.cal-d.has{background:var(--sec-c);color:var(--on-sec-c)}
+.cal-d.today{box-shadow:inset 0 0 0 2px var(--prim)}
 .cal-d i{width:5px;height:5px;border-radius:50%;background:transparent}
-.cal-d i.done{background:var(--acc)}
-.cal-d i.plan{background:var(--label-3)}
+.cal-d i.done{background:var(--prim)}
+.cal-d i.plan{background:var(--outline)}
 .cal-d i.ovr{background:var(--orange)}
-.cal-legend{display:flex;gap:14px;justify-content:center;margin-top:12px;font-size:12px;color:var(--label-3)}
-.cal-legend i{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:5px}
+.cal-legend{display:flex;gap:16px;justify-content:center;margin-top:14px;font-size:12px;color:var(--on-surf-var)}
+.cal-legend i{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:6px}
 
-/* --- accent swatches --- */
-.swatches{display:flex;gap:12px;flex-wrap:wrap}
-.swatch{width:32px;height:32px;border-radius:50%;flex:none;position:relative;transition:transform var(--fast)}
-.swatch:active{transform:scale(.9)}
-.swatch.on::after{content:'';position:absolute;inset:-4px;border-radius:50%;box-shadow:0 0 0 2px var(--label)}
-
-/* --- supersets --- */
-.ss-label{
-  font-size:12px;font-weight:600;letter-spacing:-.004em;text-transform:none;
-  color:var(--acc);margin:8px 0 5px 4px;display:flex;align-items:center;gap:5px;
+/* -------------------------------------------------------- accent swatches */
+.swatches{display:flex;gap:14px;flex-wrap:wrap}
+.swatch{
+  width:36px;height:36px;border-radius:50%;flex:none;position:relative;
+  transition:transform var(--fast) var(--ease-emph);
 }
-.ss-label .icn{font-size:13px}
-.item.in-ss{box-shadow:inset 3px 0 0 var(--acc)}
+.swatch:active{transform:scale(.88)}
+.swatch.on::after{
+  content:'';position:absolute;inset:-4px;border-radius:50%;
+  box-shadow:0 0 0 3px var(--on-surf);
+}
+
+/* -------------------------------------------------------------- supersets */
+.ss-label{
+  font-size:12px;font-weight:500;letter-spacing:.0333em;text-transform:none;
+  color:var(--prim);margin:10px 0 6px 4px;display:flex;align-items:center;gap:6px;
+}
+.ss-label .icn{font-size:14px}
+.item.in-ss{box-shadow:inset 4px 0 0 var(--prim)}
 .ss-card{
-  border-radius:var(--r-lg);padding:14px;
-  background:var(--surface);box-shadow:inset 0 0 0 1.5px var(--acc-line);
+  border-radius:var(--r-lg);padding:16px;
+  background:var(--surf-c);box-shadow:inset 0 0 0 2px var(--acc-line);
 }
 .ss-hd{
-  font-size:12px;font-weight:600;color:var(--acc);margin-bottom:12px;
-  text-align:center;display:flex;align-items:center;justify-content:center;gap:5px;
+  font-size:12px;font-weight:500;color:var(--prim);margin-bottom:14px;
+  text-align:center;display:flex;align-items:center;justify-content:center;gap:6px;
+  letter-spacing:.0333em;
 }
 .ss-ex{position:relative}
-.ss-amp{text-align:center;font-size:15px;font-weight:600;color:var(--acc);margin:14px 0 8px}
+.ss-amp{text-align:center;font-size:16px;font-weight:500;color:var(--prim);margin:16px 0 10px}
 
-/* --- home: today's session row --- */
+/* ------------------------------------------------ home: today's session -- */
 .today-row{
-  display:flex;align-items:center;justify-content:space-between;gap:10px;
-  margin-top:12px;padding:12px 14px;border-radius:var(--r);background:var(--surface-2);
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  margin-top:14px;padding:14px 16px;border-radius:var(--r-md);
+  background:var(--surf-c-high);
   transition:background var(--fast);width:100%;text-align:left;
 }
-.today-row:active{background:var(--surface-3)}
-.today-row .lbl2{font-size:11px;font-weight:500;letter-spacing:.03em;text-transform:uppercase;color:var(--label-3)}
+.today-row:active{background:var(--surf-c-highest)}
+.today-row .lbl2{
+  font-size:11px;font-weight:500;letter-spacing:.0455em;text-transform:uppercase;
+  color:var(--on-surf-var);
+}
 .today-row .ttl{
-  font-weight:500;font-size:17px;line-height:1.25;text-transform:capitalize;
-  letter-spacing:-.012em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;
+  font-weight:400;font-size:16px;line-height:1.5;text-transform:capitalize;
+  letter-spacing:.0313em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  margin-top:3px;
 }
 
-/* --------------------------------------------------- desktop (≥1000px) --- */
+/* ============================================================ ONBOARDING == */
+/*  A full-height flow rather than a sequence of sheets: it is the first thing
+    anyone sees, it must not look like a dialog interrupting an app they have
+    not met yet, and each step needs the whole screen for one question.        */
+.onb{
+  min-height:100dvh;display:flex;flex-direction:column;
+  margin:calc(var(--sat) * -1 - 4px) calc(var(--pad) * -1) calc(-116px - var(--sab));
+  padding:calc(var(--sat) + 8px) var(--pad) calc(20px + var(--sab));
+  background:var(--surf);
+}
+.onb-top{display:flex;align-items:center;gap:12px;min-height:48px}
+/* progress as segments, not a spinner — five taps is a promise worth showing */
+.onb-prog{flex:1;display:flex;gap:4px;align-items:center}
+.onb-prog i{
+  flex:1;height:4px;border-radius:var(--r-full);background:var(--surf-c-highest);
+  transition:background var(--med) var(--ease-emph);
+}
+.onb-prog i.on{background:var(--prim)}
+
+.onb-body{flex:1;display:flex;flex-direction:column;padding:24px 0 16px;animation:onbin var(--slow) var(--ease-emph-dec)}
+@keyframes onbin{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:none}}
+
+.onb-hero{
+  width:96px;height:96px;border-radius:var(--r-2xl);margin:8px auto 28px;
+  background:var(--prim-c);color:var(--on-prim-c);
+  display:flex;align-items:center;justify-content:center;font-size:48px;
+  --icon-stroke:1.7;
+}
+.onb-hero.done{background:var(--prim);color:var(--on-prim);--icon-stroke:2.6}
+
+/* M3 display-small for the question, body-large for the explanation */
+.onb-h{font-size:30px;line-height:1.25;font-weight:400;letter-spacing:0;margin-bottom:10px}
+.onb-p{
+  font-size:16px;line-height:1.5;letter-spacing:.0313em;color:var(--on-surf-var);
+  margin-bottom:24px;max-width:34ch;
+}
+
+.onb-list{display:flex;flex-direction:column;gap:10px}
+.onb-c{
+  display:flex;align-items:center;gap:16px;width:100%;text-align:left;
+  padding:16px;border-radius:var(--r-lg);background:var(--surf-c);
+  box-shadow:inset 0 0 0 1px transparent;
+  transition:background var(--fast),box-shadow var(--fast);
+  position:relative;overflow:hidden;
+}
+.onb-c:active{background:var(--surf-c-high)}
+/* selection is carried by fill AND outline AND a check: one of the three is
+   invisible to someone who cannot separate the two surface tones */
+.onb-c.on{background:var(--sec-c);box-shadow:inset 0 0 0 2px var(--prim)}
+.onb-ci{
+  width:48px;height:48px;border-radius:var(--r-md);flex:none;font-size:26px;
+  display:flex;align-items:center;justify-content:center;
+  background:var(--surf-c-high);color:var(--on-surf-var);
+  transition:background var(--fast),color var(--fast);
+}
+.onb-c.on .onb-ci{background:var(--prim);color:var(--on-prim)}
+.onb-ct{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.onb-cn{font-size:17px;font-weight:500;letter-spacing:.0094em}
+.onb-cs{font-size:13px;line-height:1.4;color:var(--on-surf-var);letter-spacing:.0192em}
+.onb-c.on .onb-cs{color:var(--on-sec-c)}
+.onb-ck{color:var(--prim);font-size:24px;flex:none}
+
+/* days: a row of big numeric targets — the answer is a number, so show numbers */
+.onb-days{display:flex;gap:8px}
+.onb-d{
+  flex:1;min-width:0;padding:16px 4px;border-radius:var(--r-lg);
+  background:var(--surf-c);display:flex;flex-direction:column;align-items:center;gap:2px;
+  transition:background var(--fast),box-shadow var(--fast);
+  box-shadow:inset 0 0 0 2px transparent;position:relative;overflow:hidden;
+}
+.onb-d:active{background:var(--surf-c-high)}
+.onb-d.on{background:var(--sec-c);box-shadow:inset 0 0 0 2px var(--prim)}
+.onb-d .n{font-size:26px;font-weight:400;line-height:1.1}
+.onb-d .l{font-size:11px;color:var(--on-surf-var);letter-spacing:.0455em;text-transform:uppercase}
+.onb-d.on .n,.onb-d.on .l{color:var(--on-sec-c)}
+
+.onb-note{
+  display:flex;align-items:flex-start;gap:10px;margin-top:20px;
+  padding:14px 16px;border-radius:var(--r-md);background:var(--surf-c);
+  font-size:13px;line-height:1.45;color:var(--on-surf-var);letter-spacing:.0192em;
+}
+.onb-note .icn{flex:none;font-size:18px;color:var(--prim);margin-top:1px}
+
+/* the trust claims on the first screen: three lines, no card, no decoration —
+   they are the reason to install, not a feature list */
+.onb-facts{display:flex;flex-direction:column;gap:14px;margin-top:8px}
+.onb-facts>div{display:flex;align-items:center;gap:14px;font-size:15px;letter-spacing:.0178em}
+.onb-facts .icn{flex:none;font-size:22px;color:var(--prim)}
+
+.onb-week{display:flex;flex-direction:column;gap:8px;margin-top:4px}
+.onb-wr{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:14px 16px;border-radius:var(--r-md);background:var(--surf-c);
+}
+.onb-wd{font-size:13px;color:var(--on-surf-var);letter-spacing:.0333em;text-transform:uppercase}
+.onb-wn{
+  display:flex;align-items:center;gap:8px;font-size:16px;font-weight:500;
+  letter-spacing:.0094em;
+}
+.onb-wn .icn{font-size:19px;color:var(--prim)}
+
+.onb-foot{padding-top:8px}
+
+@media (min-width:1000px){
+  .onb{max-width:560px;margin-left:auto;margin-right:auto}
+}
+
+/* =========================================== desktop / large screen ======= */
 .cols{display:block}
 @media (min-width:1000px){
   #app{max-width:1080px;padding-top:32px}
-  .cols{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
   .cols>*{min-width:0}
   #app .list{display:grid;grid-template-columns:1fr 1fr;gap:8px}
   #modal-root .list,.narrow .list{display:flex;flex-direction:column}
   .narrow{max-width:640px;margin:0 auto}
   .tiles{grid-template-columns:repeat(4,1fr)}
   .cols .tiles{grid-template-columns:1fr 1fr}
+  /* On a wide screen M3 moves navigation to a rail, but this app is a phone
+     app that happens to open in a browser — a floating bar keeps one mental
+     model rather than teaching a second layout. */
   #tabbar{
-    left:50%;right:auto;bottom:16px;transform:translateX(-50%);width:520px;
-    border:var(--hair) solid var(--sep-op);border-radius:var(--r-xl);
-    padding:7px 10px 9px;box-shadow:0 12px 40px -10px rgba(0,0,0,.5);
+    left:50%;right:auto;bottom:16px;transform:translateX(-50%);width:540px;
+    height:80px;padding:12px 8px;border-radius:var(--r-xl);box-shadow:var(--el-2);
+    background:var(--surf-c-high);
   }
-  #tabbar button.start{margin-top:-26px}
-  .sheet{left:50%;right:auto;margin-left:-320px;width:640px;border-radius:var(--r-xl) var(--r-xl) 0 0}
-  .center{width:340px}
-  #timer{left:50%;right:auto;margin-left:-260px;width:520px;bottom:112px}
-  /* 520px fits the clock, the bar and all three controls on one line again */
-  #timer.rest{flex-direction:row;align-items:center;gap:14px}
+  #fab{right:calc(50% - 340px);bottom:32px}
+  .sheet{
+    left:50%;right:auto;margin-left:-320px;width:640px;
+    border-radius:var(--r-xl) var(--r-xl) 0 0;
+  }
+  .center{width:360px}
+  #timer{left:50%;right:auto;margin-left:-270px;width:540px;bottom:112px}
+  #timer.rest{flex-direction:row;align-items:center;gap:16px}
   #timer.rest .head{flex:1;min-width:0}
+  #toast{left:50%;right:auto;transform:translateX(-50%) translateY(12px);width:520px;bottom:112px}
+  #toast.show{transform:translateX(-50%)}
   .exmedia img{height:380px}
   .hm-wrap{display:flex;flex-direction:column;align-items:center}
 }

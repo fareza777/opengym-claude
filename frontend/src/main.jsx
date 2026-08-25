@@ -2,7 +2,10 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App.jsx'
 import { MOBILE } from './lib/mobile.js'
+import { installRipple } from './lib/ripple.js'
 import './index.css'
+
+installRipple()
 
 createRoot(document.getElementById('root')).render(
   <StrictMode><App /></StrictMode>

@@ -44,4 +44,9 @@ export function weekKey(d) {
 export const localTZ = () => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC' } catch { return 'UTC' } }
 
 export const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7)
-export const ACCENTS = { lime: '#30d158', sky: '#0a84ff', orange: '#ff9f0a', violet: '#bf5af2', pink: '#ff375f', red: '#ff453a', teal: '#40c8e0', gold: '#ffd60a' }
+// Accent swatches shown in Settings. The value is the dark-theme primary of
+// each accent (the tone the app is seen in by default) so the dot in Settings is
+// the colour you are actually picking. The full tonal palettes are derived from
+// these hues in index.css — see the accent block there.
+// `ember` is the brand default: a forge colour, for an app called Tempa.
+export const ACCENTS = { ember: '#ff9a4d', lime: '#b4e37a', sky: '#9ccaff', orange: '#ffb868', violet: '#d0bcff', pink: '#ffb0c8', red: '#ffb4a6', teal: '#4fd8e4', gold: '#e9c400' }
