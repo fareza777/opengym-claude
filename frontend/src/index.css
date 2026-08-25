@@ -983,12 +983,27 @@ h4.sec{
     320dp: 256 content - 24 (badge) - 40 (check) - 15 (gaps) = 177 across two
     steppers, 1.4 : 1 -> 103 / 74, minus 2x26 of buttons = 51 / 22 for digits.  */
 .setrow{display:flex;align-items:center;gap:6px;padding:5px 0;position:relative}
+/* The set number is also the warm-up toggle, so it is a button and needs a hit
+   area larger than the 24px it paints. The negative margin keeps that area from
+   widening the row, which the width budget above cannot afford. */
 .setrow .n{
   width:24px;height:24px;border-radius:var(--r-xs);background:var(--surf-c-high);
   color:var(--on-surf-var);display:flex;align-items:center;justify-content:center;
-  font-size:12px;font-weight:500;flex:none;
+  font-size:12px;font-weight:500;flex:none;padding:0;
   transition:background var(--fast),color var(--fast);
+  position:relative;
 }
+.setrow .n::after{content:'';position:absolute;inset:-10px -4px}   /* hit area */
+.setrow .n:active{background:var(--surf-c-highest);color:var(--on-surf)}
+/* A warm-up is still legible — you may want to read what you lifted — but it
+   steps out of the accent language entirely, because it is not training. */
+.setrow.warm .n{
+  background:none;color:var(--on-surf-var);
+  box-shadow:inset 0 0 0 1.5px var(--outline);font-size:11px;
+}
+.setrow.warm .stp{background:var(--surf-c-low)}
+.setrow.warm .stp .num{color:var(--on-surf-var)}
+.setrow.warm .chk::before,.setrow.warm .ck::before{box-shadow:inset 0 0 0 2px var(--outline-var)}
 .setrow .stp.w{flex:1.4;min-width:0}
 .setrow .stp.r{flex:1;min-width:0}
 .setrow .stp.eff{flex:1.1;min-width:0}

@@ -33,6 +33,18 @@ export const isTimed = cfg => modeOf(cfg) === 'time'
 // reads as false, so nothing needs migrating.
 export const isBw = cfg => (cfg && cfg.bodyweight != null ? !!cfg.bodyweight : isBodyweightEq(cfg && cfg.id))
 export const isPerSide = cfg => !!(cfg && cfg.side)
+
+// Warm-up sets.
+//
+// A warm-up single at 40 kg before a 100 kg working set is not training, and
+// counting it as training breaks three things at once: it drags the session
+// volume down, it enters the 1RM estimate as a real attempt, and — worst — the
+// progression engine reads it as a set that missed its target reps, which marks
+// the whole session as a miss and eventually deloads you for warming up
+// properly. Every aggregate that answers "what did you actually train" filters
+// these out; the log still keeps them, because what you did is what you did.
+export const isWarm = s => !!(s && s.warm)
+export const isWork = s => !!(s && s.done && !s.warm)
 // What one side did, for display only. Half of an odd total is shown as it falls (8.5) rather
 // than rounded away: it means the sides were not even, which is worth seeing.
 export const sideReps = reps => (reps || 0) / 2
@@ -144,7 +156,7 @@ export function lastEntryFor(S, exId) {
     // `target` is what the session prescribed; finished workouts carry it so labels and the
     // progression engine can read a session back the way it was logged. Older workouts have
     // none — modeOf() falls back to the body part for them, which is what they were.
-    if (en && en.sets.some(s => s.done)) return { d: S.workouts[i].d, sets: en.sets.filter(s => s.done), target: en.target || null }
+    if (en && en.sets.some(isWork)) return { d: S.workouts[i].d, sets: en.sets.filter(isWork), target: en.target || null }
   }
   return null
 }
@@ -152,7 +164,7 @@ export function bestWeightFor(S, exId) {
   let best = 0
   S.workouts.forEach(w => w.entries.forEach(e => {
     if (e.id === exId) {
-      e.sets.forEach(s => { if (s.done && s.w > best) best = s.w })
+      e.sets.forEach(s => { if (isWork(s) && s.w > best) best = s.w })
       if (e.topW && e.topW > best) best = e.topW
     }
   }))
@@ -207,12 +219,13 @@ export function workoutVolume(w) {
   let v = 0
   // No special case for unilateral work: a per-side set logs its total, so both sides are
   // already in the rep count that arrives here.
-  w.entries.forEach(e => e.sets.forEach(s => { if (s.done) v += (s.w || 0) * (s.r || 0) }))
+  w.entries.forEach(e => e.sets.forEach(s => { if (isWork(s)) v += (s.w || 0) * (s.r || 0) }))
   return v
 }
+// Warm-ups are excluded: "18 sets" should mean eighteen sets of training.
 export function setsDone(w) {
   let n = 0
-  w.entries.forEach(e => e.sets.forEach(s => { if (s.done) n++ }))
+  w.entries.forEach(e => e.sets.forEach(s => { if (isWork(s)) n++ }))
   return n
 }
 export function setsDoneActive(A) {

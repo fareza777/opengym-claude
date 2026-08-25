@@ -16,7 +16,7 @@
 //   · fewer sets than prescribed                       → miss
 // So a session that fell apart can never advance the load as though it had succeeded.
 
-import { modeOf, repStep } from './history.js'
+import { modeOf, repStep, isWork } from './history.js'
 import { EXIDX } from './exercises.js'
 
 export const POLICIES = ['off', 'linear', 'greyskull', 'double', 'time']
@@ -101,7 +101,10 @@ function deloadTo(cur, step) {
 export function readSession(entry, fallback) {
   const target = (entry && entry.target) || fallback || {}
   const mode = modeOf({ ...target, id: entry && entry.id })
-  const sets = (entry && entry.sets) || []
+  // Warm-ups are dropped before anything is judged. They are lighter and shorter
+  // by definition, so leaving them in marks every properly warmed-up session as
+  // a miss — which then feeds the stall counter and deloads the lifter for it.
+  const sets = ((entry && entry.sets) || []).filter(s => !s.warm)
   const planned = target.sets || sets.length
   const enough = sets.length >= planned
 
@@ -132,17 +135,64 @@ export function sessionsFor(S, exId, fallback) {
   const out = []
   ;(S.workouts || []).forEach(w => {
     const entry = w.entries.find(e => e.id === exId)
-    if (entry && entry.sets.some(s => s.done)) out.push({ d: w.d, ...readSession(entry, fallback) })
+    if (entry && entry.sets.some(isWork)) out.push({ d: w.d, ...readSession(entry, fallback) })
   })
   return out
 }
 
+/**
+ * The tail of the history for one exercise: the most recent session plus the run
+ * of misses leading up to it — which is all any policy actually reads.
+ *
+ * sessionsFor() builds the whole list, and the whole list is never needed: it
+ * walks every workout ever logged to answer a question about the last few. This
+ * walks backwards and stops as soon as it has enough, so the cost is the length
+ * of the stall streak rather than the length of someone's training career.
+ *
+ * Deliberately NOT time-windowed. Ignoring stalls older than a few weeks was the
+ * obvious-looking idea and it is wrong: someone who stopped training mid-plateau
+ * and comes back six months later is detrained, so the last thing they should be
+ * handed is the weight they were already failing at. A long gap is a reason to
+ * deload, not a reason to forget.
+ */
+export function recentFor(S, exId, fallback, mode) {
+  const workouts = S.workouts || []
+  let last = null
+  let stalls = 0
+  let prevWeight = null
+
+  for (let i = workouts.length - 1; i >= 0; i--) {
+    const entry = workouts[i].entries.find(e => e.id === exId)
+    if (!entry || !entry.sets.some(isWork)) continue
+    const session = { d: workouts[i].d, ...readSession(entry, fallback) }
+    if (mode && session.mode !== mode) continue
+    if (!last) last = session
+    if (session.ok) break
+    // A session lighter than the one after it IS the deload that already answered
+    // the misses before it. Counting through it deloads again on the next miss,
+    // and again on the one after — 10 % each time. Four bad sessions took a
+    // 100 kg squat to 65 kg, which is the program collapsing, not correcting.
+    if (prevWeight != null && session.weight > 0 && prevWeight > 0 && prevWeight < session.weight) {
+      stalls++
+      break
+    }
+    stalls++
+    prevWeight = session.weight
+  }
+  return { last, stalls }
+}
+
 // How many sessions in a row ended in a miss, counting back from the most recent.
+// Kept for the tests and for anything holding a session list already; the engine
+// itself uses recentFor(), which never builds one.
 export function stallCount(sessions) {
   let n = 0
   for (let i = sessions.length - 1; i >= 0; i--) {
     if (sessions[i].ok) break
     n++
+    const prev = sessions[i - 1]
+    // see recentFor: stop at the deload, it already answered what came before it
+    if (prev && sessions[i].weight > 0 && prev.weight > 0 && sessions[i].weight < prev.weight) break
   }
   return n
 }
@@ -162,11 +212,9 @@ export function nextPrescription(S, cfg, routine) {
   const inc = cfg.inc > 0 ? cfg.inc : (mode === 'time' ? DEFAULT_SEC_INCREMENT : defaultIncrement(cfg.id, unit))
   if (policy === 'off') return { policy, kind: 'off' }
 
-  const sessions = sessionsFor(S, cfg.id, cfg).filter(s => s.mode === mode)
-  const last = sessions[sessions.length - 1]
+  const { last, stalls } = recentFor(S, cfg.id, cfg, mode)
   if (!last) return { policy, kind: 'first', why: ['Nothing logged yet — this session sets the baseline.'] }
 
-  const stalls = stallCount(sessions)
   const deloadAt = DELOAD_AFTER[policy] || 3
 
   if (mode === 'time') {
@@ -250,7 +298,7 @@ export function nextPrescription(S, cfg, routine) {
 export function applyPrescription(sets, p) {
   if (!p || p.kind === 'off' || p.kind === 'first') return sets
   const out = sets.map(s => {
-    if (s.done) return s
+    if (s.done || s.warm) return s
     const o = { ...s }
     if (p.weight != null) o.w = p.weight
     if (p.reps != null) o.r = p.reps

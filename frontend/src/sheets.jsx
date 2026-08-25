@@ -756,7 +756,7 @@ function WorkoutDetail({ w, close }) {
       return <div key={i} className="row" style={{ marginBottom: 12, alignItems: 'flex-start' }}>
         {ex && <Thumb ex={ex} />}
         <div className="grow"><div className="tt capitalize" style={{ fontWeight: 600 }}>{ex ? ex.n : (e.n || e.id)} {w.prs && w.prs.includes(e.id) && <span className="pr"><Icon name="trophy" />PR</span>}</div>
-          <div className="ss">{e.sets.filter(s => s.done).map(s => setLabel(e.id, s, e.target)).join('  ·  ') || t('no sets')}</div></div>
+          <div className="ss">{e.sets.filter(s => s.done && !s.warm).map(s => setLabel(e.id, s, e.target)).join('  ·  ') || t('no sets')}</div></div>
       </div>
     })}
     <Button variant="danger" onClick={() => confirmSheet({ title: t('Delete workout?'), message: t('This removes it from your history for good.'), confirmText: t('Delete'), danger: true, onConfirm: () => { update(s => { s.workouts = s.workouts.filter(x => x.id !== w.id) }); close(); toast(t('Workout deleted')) } })}>{t('Delete workout')}</Button>
@@ -849,14 +849,14 @@ function TopWeight({ entryIdx, close }) {
   // to sit after every one of them.
   const entry = A ? A.entries[entryIdx] : null
   const ex = entry && EXIDX[entry.id]
-  const maxSet = entry ? Math.max(0, ...entry.sets.filter(s => s.done).map(s => s.w || 0)) : 0
+  const maxSet = entry ? Math.max(0, ...entry.sets.filter(s => s.done && !s.warm).map(s => s.w || 0)) : 0
   const prevBest = entry ? Math.max((st.exWeights[entry.id] || {}).w || 0, bestWeightFor(st, entry.id)) : 0
   const [v, setV] = useState(entry ? (Math.max(maxSet, prevBest) || entry.target.weight || 0) : 0)
   useEffect(() => { if (!entry) close() }, [!entry])
 
   const units = supersetUnits(A ? A.entries : [])
   const unit = entry ? unitOf(units, entryIdx) : []
-  const unitDone = !!entry && unit.every(i => A.entries[i].sets.every(s => s.done))
+  const unitDone = !!entry && unit.every(i => A.entries[i].sets.every(s => s.done || s.warm))
   const unitIdx = units.findIndex(u => u === unit)
   const isLastUnit = unitIdx === units.length - 1
   if (!entry || !ex) return null
@@ -939,7 +939,7 @@ function doFinishWorkout() {
   const prs = []
   const e1prs = []
   A.entries.forEach(e => {
-    const mx = Math.max(0, ...e.sets.filter(s => s.done).map(s => s.w))
+    const mx = Math.max(0, ...e.sets.filter(s => s.done && !s.warm).map(s => s.w))
     if (mx > 0 && mx > bestWeightFor(st, e.id)) prs.push(e.id)
     // A heavier estimate without a heavier top set is its own kind of progress —
     // same weight for more reps. Reported separately so it can't be read as a load PR.
@@ -951,7 +951,7 @@ function doFinishWorkout() {
     // `target` (what the session prescribed) is kept alongside the sets: without it a
     // finished workout cannot say whether it hit its reps, and a timed session reads back
     // as "0 reps". It is what the progression engine works from.
-    entries: A.entries.map(e => ({ id: e.id, sets: e.sets, topW: e.topW || null, target: e.target || null })).filter(e => e.sets.some(s => s.done)),
+    entries: A.entries.map(e => ({ id: e.id, sets: e.sets, topW: e.topW || null, target: e.target || null })).filter(e => e.sets.some(s => s.done && !s.warm)),
     prs
   }
   w.vol = workoutVolume(w)

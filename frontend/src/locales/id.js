@@ -786,6 +786,10 @@ export default {
   'Take me to the app': 'Bawa aku ke aplikasinya',
   'Today is a rest day — your first session is {0}.':
     'Hari ini hari istirahat — sesi pertamamu hari {0}.',
+  // --- warm-up sets ---
+  'W': 'P',
+  'Tap to mark as a warm-up': 'Ketuk untuk menandai sebagai pemanasan',
+  'Warm-up set — tap to make it count': 'Set pemanasan — ketuk agar dihitung',
   // --- offline media ---
   'Offline': 'Offline',
   'Saved on this phone': 'Tersimpan di HP ini',

@@ -33,7 +33,7 @@ function MuscleBalance({ S }) {
   // into "where did the stimulus go" — a muscle can lead on sets and still never be trained
   // hard. Offered only when the window holds ratings at all, since with none the hard map
   // would just be empty and read as "you trained nothing".
-  const rated = inWin.some(w => w.entries.some(e => e.sets.some(s => s.done && isHardSet(s))))
+  const rated = inWin.some(w => w.entries.some(e => e.sets.some(s => s.done && !s.warm && isHardSet(s))))
   const on = hard && rated
   const load = loadOfWorkouts(inWin, on ? isHardSet : null)
   const { worked, missed } = rankOf(load)
@@ -167,7 +167,7 @@ export default function Stats() {
   if (curEx) {
     S.workouts.forEach(w => {
       const en = w.entries.find(e => e.id === curEx)
-      if (en) { const mx = Math.max(0, ...en.sets.filter(s => s.done).map(metric), curCardio || curTimed ? 0 : (en.topW || 0)); if (mx > 0) { exPts.push({ t: w.start, y: mx, d: w.d, sets: en.sets.filter(s => s.done), target: en.target }); if (mx > exBest) exBest = mx } }
+      if (en) { const work = en.sets.filter(s => s.done && !s.warm); const mx = Math.max(0, ...work.map(metric), curCardio || curTimed ? 0 : (en.topW || 0)); if (mx > 0) { exPts.push({ t: w.start, y: mx, d: w.d, sets: work, target: en.target }); if (mx > exBest) exBest = mx } }
     })
     exList = exPts.slice(-5).reverse()
   }

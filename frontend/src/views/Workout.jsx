@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useStore } from '../store/useStore.js'
 import { useUI } from '../store/useUI.js'
 import { exOr } from '../lib/exercises.js'
-import { effectiveRoutine, lastEntryFor, bestWeightFor, buildSets, setsDoneActive, supersetUnits, unitOf, setLabel, modeOf, isBw, isPerSide, sideReps, repStep, EFFORT, effortOf, stepEffort, capEffort } from '../lib/history.js'
+import { effectiveRoutine, lastEntryFor, bestWeightFor, buildSets, setsDoneActive, supersetUnits, unitOf, setLabel, modeOf, isBw, isPerSide, sideReps, repStep, isWork, EFFORT, effortOf, stepEffort, capEffort } from '../lib/history.js'
 import { fmtNum, fmtDate, todayISO, exCount, DAYN } from '../lib/format.js'
 import { beep, vibrate } from '../lib/sound.js'
 import { t } from '../lib/i18n.js'
@@ -54,7 +54,7 @@ function Elapsed({ start }) {
 }
 
 /* ---------- one exercise block (reps: weight×reps · time: a held duration · cardio: duration+speed) ---------- */
-function ExerciseBlock({ entryIdx, compact, onToggle, onField, onAddSet, onRemoveSet, onStartTimed }) {
+function ExerciseBlock({ entryIdx, compact, onToggle, onField, onAddSet, onRemoveSet, onStartTimed, onToggleWarm }) {
   const S = useStore(s => s.S)
   const working = useUI(s => s.work)
   const entry = S.active.entries[entryIdx]
@@ -118,7 +118,7 @@ function ExerciseBlock({ entryIdx, compact, onToggle, onField, onAddSet, onRemov
       {cardio && <span className="tag acc"><Icon name="figureRun" />{t('Cardio')}</span>}
       {/* You log the total; this is the split, so the set in front of you is unambiguous
           without the rep count having to mean two different things (issue #31). */}
-      {!cardio && !timed && isPerSide(cfg) && <span className="tag acc nocap"><Icon name="shuffle" />{t('{0} per side', fmtNum(sideReps(entry.sets.find(s => !s.done)?.r ?? entry.sets[0]?.r)))}</span>}
+      {!cardio && !timed && isPerSide(cfg) && <span className="tag acc nocap"><Icon name="shuffle" />{t('{0} per side', fmtNum(sideReps(entry.sets.find(s => !s.done && !s.warm)?.r ?? entry.sets[0]?.r)))}</span>}
       {(ex.tg || ex.bp) && <span className="tag">{t(ex.tg || ex.bp)}</span>}
       {ex.eq && <span className="tag">{t(ex.eq)}</span>}
       {best > 0 && <span className="tag nocap">{t('Best:')} {fmtNum(best)} {S.unit}</span>}
@@ -131,8 +131,17 @@ function ExerciseBlock({ entryIdx, compact, onToggle, onField, onAddSet, onRemov
     <div className="card" style={{ marginTop: 10, marginBottom: 0 }}>
       {/* the header carries the same eff3 sizing as the rows, or the labels drift off their columns */}
       <div className={'sethead' + (col3 ? ' eff3' : '')}><span className="n-sp" /><span className="w-sp">{col1.hd}</span>{col2 && <span className="r-sp">{col2.hd}</span>}{col3 && <span className="eff-sp">{col3.hd}</span>}{timed && <span className="ck-sp" />}<span className="ck-sp" /></div>
-      {entry.sets.map((s, i) => <div key={i} className={'setrow' + (s.done ? ' done' : '') + (col3 ? ' eff3' : '')}>
-        <div className="n">{i + 1}</div>
+      {entry.sets.map((s, i) => <div key={i} className={'setrow' + (s.done ? ' done' : '') + (s.warm ? ' warm' : '') + (col3 ? ' eff3' : '')}>
+        {/* The set number doubles as the warm-up toggle. Putting it here rather
+            than behind a long-press keeps it discoverable and keeps the row at
+            the same width — a warm-up marker that added a control would cost the
+            reps field the space finding 01 of the audit just bought it. */}
+        <button className="n" onClick={() => onToggleWarm(i)}
+          aria-pressed={!!s.warm}
+          title={s.warm ? t('Warm-up set — tap to make it count') : t('Tap to mark as a warm-up')}
+          aria-label={s.warm ? t('Warm-up set — tap to make it count') : t('Tap to mark as a warm-up')}>
+          {s.warm ? t('W') : i + 1}
+        </button>
         {cell(s, i, col1, 'w')}
         {col2 && cell(s, i, col2, 'r')}
         {col3 && cell(s, i, col3, 'eff')}
@@ -182,6 +191,12 @@ function ActiveWorkout() {
     else e.sets.push({ w: l ? l.w : 0, r: l ? l.r : e.target.reps, done: false })
   })
   const removeSet = idx => mutEntry(idx, e => { if (e.sets.length > 1) e.sets.pop() })
+  // A warm-up keeps whatever it was logged at; it just stops counting as training.
+  // Clearing the flag rather than storing `warm: false` keeps a set carrying only
+  // what was actually true of it, in the session, in history and in a backup.
+  const toggleWarm = (idx, i) => mutEntry(idx, e => {
+    if (e.sets[i].warm) delete e.sets[i].warm; else e.sets[i].warm = true
+  })
 
   // A timed set is held, not typed. The work timer records what was actually held — an early
   // finish logs 0:38 of a 0:45 target rather than crediting the full prescription — and then
@@ -205,7 +220,7 @@ function ActiveWorkout() {
       if (e.sets[i].done) {
         beep(S.sound, 1040, 0.12); vibrate(30)
         const isLastExInUnit = idx === unit[unit.length - 1]
-        const unitDone = unit.every(ui => (ui === idx ? e : A.entries[ui]).sets.every(x => x.done))
+        const unitDone = unit.every(ui => (ui === idx ? e : A.entries[ui]).sets.every(x => x.done || x.warm))
         if (isLastExInUnit && !unitDone) startRest(S.restSec)
         else if (unitDone) stopRest()
         if (unitDone && isLastUnit) workoutDone = true      // last exercise's last set → done
@@ -213,7 +228,7 @@ function ActiveWorkout() {
         // plank has nothing to put in that slider, and neither does a set of push-ups
         // (issue #32: the fewest taps that still record what happened).
         const loaded = m === 'reps' && !(isBw({ ...(e.target || {}), id: e.id }) && !e.sets.some(x => x.w > 0))
-        if (e.sets.every(x => x.done)) { exJustDone = true; if (loaded && !e.asked) { e.asked = true; askTop = true } }
+        if (e.sets.every(x => x.done || x.warm)) { exJustDone = true; if (loaded && !e.asked) { e.asked = true; askTop = true } }
       }
     })
     // reps: topWeight first (it chains into the finish/continue prompt on the last unit).
@@ -267,11 +282,11 @@ function ActiveWorkout() {
           {unit.map((idx, k) => <div key={idx} className="ss-ex">
             {k > 0 && <div className="ss-amp">+</div>}
             <ExerciseBlock entryIdx={idx} compact
-              onToggle={i => toggle(idx, i)} onField={(i, f, v) => setField(idx, i, f, v)} onAddSet={() => addSet(idx)} onRemoveSet={() => removeSet(idx)} onStartTimed={i => startTimed(idx, i)} />
+              onToggle={i => toggle(idx, i)} onField={(i, f, v) => setField(idx, i, f, v)} onAddSet={() => addSet(idx)} onRemoveSet={() => removeSet(idx)} onStartTimed={i => startTimed(idx, i)} onToggleWarm={i => toggleWarm(idx, i)} />
           </div>)}
         </div>
       ) : (
-        <ExerciseBlock entryIdx={cur} onToggle={i => toggle(cur, i)} onField={(i, f, v) => setField(cur, i, f, v)} onAddSet={() => addSet(cur)} onRemoveSet={() => removeSet(cur)} onStartTimed={i => startTimed(cur, i)} />
+        <ExerciseBlock entryIdx={cur} onToggle={i => toggle(cur, i)} onField={(i, f, v) => setField(cur, i, f, v)} onAddSet={() => addSet(cur)} onRemoveSet={() => removeSet(cur)} onStartTimed={i => startTimed(cur, i)} onToggleWarm={i => toggleWarm(cur, i)} />
       )}
     </> : <div className="empty"><div className="ico"><Icon name="shuffle" /></div>{t('Freestyle workout — add your first exercise.')}</div>}
 
@@ -289,7 +304,7 @@ function ActiveWorkout() {
     }), null, S.routines.find(r => r.id === A.routineId)))} icon="plus">{t('Add exercise')}</Button>
     <div style={{ height: 10 }} />
     {(() => {
-      const exDone = A.entries.filter(e => e.sets.length && e.sets.every(s => s.done)).length
+      const exDone = A.entries.filter(e => e.sets.length && e.sets.every(s => s.done || s.warm)).length
       const allDone = A.entries.length > 0 && exDone === A.entries.length
       return <button className={allDone ? 'btn primary' : 'btn ghost dim'} onClick={finishWorkout}>
         {allDone ? t('Finish workout') : t('Finish workout early · {0} exercises', exDone + '/' + A.entries.length)}

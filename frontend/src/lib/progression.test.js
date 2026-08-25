@@ -1,9 +1,10 @@
 import { describe, it, expect } from 'vitest'
 import {
-  readSession, sessionsFor, stallCount, nextPrescription, applyPrescription,
+  readSession, sessionsFor, stallCount, recentFor, nextPrescription, applyPrescription,
   policyFor, defaultIncrement, POLICIES_FOR, DELOAD_AFTER, MAX_BW_SETS
 } from './progression.js'
 import { EXDB } from './exercises.js'
+import { setsDone, workoutVolume } from './history.js'
 
 const LIFT = EXDB.find(e => e.bp !== 'cardio' && !['upper legs', 'lower legs', 'back', 'hips', 'glutes'].includes(e.bp)).id
 const HEAVY = EXDB.find(e => e.bp === 'upper legs').id
@@ -21,6 +22,72 @@ const hist = (id, rows, target) => ({
       sets: row.slice(1).map(r => (r === null ? { w: row[0], r: 0, done: false } : { w: row[0], r, done: true }))
     }]
   }))
+})
+
+describe('warm-up sets', () => {
+  const cfgW = { id: LIFT, sets: 3, reps: 5, weight: 100, prog: 'linear' }
+  // A session warmed up properly: two light sets, then three working sets at the
+  // target. Before warm-ups existed those two rows read as sets that missed their
+  // reps, so the whole session scored as a miss — three of them and the lifter was
+  // deloaded for warming up.
+  const warmed = w => ({
+    id: LIFT, target: { sets: 3, reps: 5, weight: w },
+    sets: [
+      { w: 40, r: 8, done: true, warm: true },
+      { w: 70, r: 3, done: true, warm: true },
+      { w, r: 5, done: true }, { w, r: 5, done: true }, { w, r: 5, done: true },
+    ],
+  })
+
+  it('does not let a warm-up turn a clean session into a miss', () => {
+    expect(readSession(warmed(100)).ok).toBe(true)
+  })
+
+  it('reads the working weight, not the warm-up weight', () => {
+    expect(readSession(warmed(100)).weight).toBe(100)
+  })
+
+  it('progresses a warmed-up session instead of deloading it', () => {
+    const S = { unit: 'kg', workouts: [1, 2, 3].map(i => ({ d: '2026-01-0' + i, entries: [warmed(100)] })) }
+    const p = nextPrescription(S, cfgW, null)
+    expect(p.kind).toBe('up')
+    expect(p.weight).toBeGreaterThan(100)
+  })
+
+  it('keeps warm-ups out of the set count and the volume', () => {
+    const w = { entries: [warmed(100)] }
+    expect(setsDone(w)).toBe(3)
+    expect(workoutVolume(w)).toBe(3 * 100 * 5)
+  })
+
+  it('never rewrites a warm-up when a new prescription is applied', () => {
+    const sets = [{ w: 40, r: 8, warm: true }, { w: 100, r: 5 }]
+    const out = applyPrescription(sets, { kind: 'up', weight: 105 })
+    expect(out[0].w).toBe(40)
+    expect(out[1].w).toBe(105)
+  })
+})
+
+describe('recentFor', () => {
+  it('returns the same last session and stall count as walking the whole list', () => {
+    const rows = [[60, 5, 5, 5], [62.5, 5, 5, 3], [62.5, 5, 5, 4]]
+    const S = hist(LIFT, rows)
+    const cfg = { id: LIFT, sets: 3, reps: 5, weight: 60, prog: 'linear' }
+    const all = sessionsFor(S, LIFT, cfg).filter(x => x.mode === 'reps')
+    const cheap = recentFor(S, LIFT, cfg, 'reps')
+    expect(cheap.last.weight).toBe(all[all.length - 1].weight)
+    expect(cheap.last.ok).toBe(all[all.length - 1].ok)
+    expect(cheap.stalls).toBe(stallCount(all))
+  })
+
+  it('reads nothing when the exercise has no history', () => {
+    expect(recentFor({ workouts: [] }, LIFT, {}, 'reps').last).toBe(null)
+  })
+
+  it('skips sessions logged in a different mode', () => {
+    const S = hist(LIFT, [[60, 5, 5, 5]])
+    expect(recentFor(S, LIFT, {}, 'time').last).toBe(null)
+  })
 })
 
 describe('readSession', () => {
@@ -135,6 +202,43 @@ describe('linear progression', () => {
     expect(p.kind).toBe('deload')
     expect(p.weight).toBe(55)             // 60 × 0.9 = 54 → nearest loadable 2.5 step
     expect(DELOAD_AFTER.linear).toBe(3)
+  })
+
+  // The bug this guards: stallCount() counted every consecutive miss back to the
+  // beginning of history and never reset when a deload actually happened, so once
+  // past the threshold EVERY further miss cut another 10 %. A 100 kg squat went
+  // 100 -> 90 -> 80 -> 70 -> 65 in four bad sessions. A deload has to be given a
+  // chance to work before another one is prescribed.
+  it('deloads once, then holds — it does not cut again on the very next miss', () => {
+    // three misses at 100 earn the deload; the session at 90 is that deload, missed
+    const p = nextPrescription(hist(LIFT, [[100, 5, 5, 3], [100, 5, 5, 3], [100, 5, 5, 3], [90, 5, 5, 3]]), cfg)
+    expect(p.kind).toBe('hold')
+    expect(p.weight).toBe(90)
+  })
+
+  it('deloads again only after the deloaded weight has been missed enough times', () => {
+    const rows = [[100, 5, 5, 3], [100, 5, 5, 3], [100, 5, 5, 3],
+                  [90, 5, 5, 3], [90, 5, 5, 3], [90, 5, 5, 3]]
+    const p = nextPrescription(hist(LIFT, rows), cfg)
+    expect(p.kind).toBe('deload')
+    expect(p.weight).toBeLessThan(90)
+  })
+
+  it('never spirals: repeated misses after a deload cannot compound the cut', () => {
+    // Walk the exact trace from the audit and assert the weight never drops twice
+    // without three misses at the new weight in between.
+    const rows = []
+    let w = 100
+    const seen = []
+    for (let i = 0; i < 8; i++) {
+      const p = nextPrescription(hist(LIFT, rows.length ? rows : [[w, 5, 5, 5]]), cfg)
+      if (rows.length) { seen.push(p.kind); if (p.weight != null) w = p.weight }
+      rows.push([w, 5, 5, 3])           // athlete misses again at whatever was prescribed
+    }
+    const deloads = seen.filter(k => k === 'deload').length
+    // 8 missed sessions, deload threshold 3 -> at most a couple of cuts, never one per session
+    expect(deloads).toBeLessThanOrEqual(3)
+    expect(w).toBeGreaterThan(70)       // the old behaviour reached 65 within 6 sessions
   })
 
   it('a good session in between clears the stall', () => {
