@@ -2,12 +2,16 @@ import { create } from 'zustand'
 import { api } from '../lib/api.js'
 import { localTZ } from '../lib/format.js'
 import { registerCustom } from '../lib/exercises.js'
+import { deviceLang } from '../lib/i18n.js'
 import { DEMO, DEMO_SEEDED } from '../lib/demo.js'
 import { MOBILE, nativeLoad, nativeSave, syncReminder } from '../lib/mobile.js'
 
 const KEY = 'gym_state_v1'
 export const DEF = {
-  unit: 'kg', restSec: 90, sound: true, keepAwake: true, lang: 'en',
+  // `lang: null` means "never chosen" — App.jsx resolves it against the device
+  // language on every load. Storing a resolved 'en' here instead would pin the
+  // default for everyone whose phone is not in English.
+  unit: 'kg', restSec: 90, sound: true, keepAwake: true, lang: null,
   theme: 'dark', accent: 'ember', body: 'male', targetW: null,
   bodyweight: [], routines: [], week: {}, dayPlan: {},
   exWeights: {}, workouts: [], active: null, customEx: [], gifSize: 'full',

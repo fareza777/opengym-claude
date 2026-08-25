@@ -6,15 +6,34 @@
 import { useSyncExternalStore } from 'react'
 
 // UI languages. de/pt have no instruction pack upstream — instructions fall back to English.
+// Indonesian sits second because it is the app's primary market; the rest keep
+// their previous order. id/de/pt have no instruction pack upstream — exercise
+// instructions fall back to English there.
 export const LANGS = {
-  en: 'English', de: 'Deutsch', es: 'Español', fr: 'Français', it: 'Italiano',
-  pt: 'Português', pl: 'Polski', tr: 'Türkçe', ru: 'Русский', zh: '中文',
+  en: 'English', id: 'Bahasa Indonesia', de: 'Deutsch', es: 'Español',
+  fr: 'Français', it: 'Italiano', pt: 'Português', pl: 'Polski',
+  tr: 'Türkçe', ru: 'Русский', zh: '中文',
   ko: '한국어', hi: 'हिन्दी'
 }
 export const INSTR_LANGS = ['en', 'es', 'fr', 'it', 'tr', 'ru', 'zh', 'hi', 'pl', 'ko']
 const DATE_LOCALES = {
-  en: 'en-GB', de: 'de-DE', es: 'es-ES', fr: 'fr-FR', it: 'it-IT', pt: 'pt-PT',
-  pl: 'pl-PL', tr: 'tr-TR', ru: 'ru-RU', zh: 'zh-CN', ko: 'ko-KR', hi: 'hi-IN'
+  en: 'en-GB', id: 'id-ID', de: 'de-DE', es: 'es-ES', fr: 'fr-FR', it: 'it-IT',
+  pt: 'pt-PT', pl: 'pl-PL', tr: 'tr-TR', ru: 'ru-RU', zh: 'zh-CN', ko: 'ko-KR', hi: 'hi-IN'
+}
+
+// The language the device is set to, when the app has a pack for it. Used only
+// as the default for a profile that has never chosen one — an explicit choice in
+// Settings is stored and always wins. Without this an Indonesian phone opened
+// Tempa in English and most people never went looking for the setting.
+export function deviceLang() {
+  const tags = (navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language || 'en'])
+  for (const tag of tags) {
+    const base = String(tag).toLowerCase().split('-')[0]
+    // Indonesian carries two legacy ISO codes that some Android builds still send.
+    const norm = base === 'in' || base === 'ind' ? 'id' : base
+    if (LANGS[norm]) return norm
+  }
+  return 'en'
 }
 
 const localePacks = import.meta.glob('../locales/*.js')
