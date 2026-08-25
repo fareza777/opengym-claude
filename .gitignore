@@ -1,0 +1,28 @@
+# dependencies
+node_modules/
+# build output
+frontend/dist/
+frontend/android/app/src/main/assets/public/
+frontend/android/app/build/
+frontend/android/build/
+frontend/android/.gradle/
+frontend/android/local.properties
+frontend/android/keystore.properties
+*.keystore
+*.jks
+# downloaded exercise media (see NOTICE.md — not ours to redistribute)
+media/gif/
+media/img/
+# runtime data (self-hosted server)
+data/db.json
+data/secret
+data/vapid.json
+# os / editor
+.DS_Store
+Thumbs.db
+.idea/
+*.iml
+.vscode/
+# logs
+*.log
+npm-debug.log*
