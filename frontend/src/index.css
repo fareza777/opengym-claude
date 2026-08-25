@@ -275,24 +275,44 @@
     cannot quietly fail. If you change a seed, re-measure — do not assume.      */
 
 /* ---------------------------------------------------- exercise demos ------ */
-/*  Light theme leaves them exactly as the dataset drew them. */
-:root[data-theme="light"] { --demo-bg:#fff; --demo-filter:none }
+/*  The dataset ships every demo at 180x180. At the 300px the workout screen
+    gives them, on a 440dpi phone, that is a 4.6x upscale — so how the image is
+    treated on the way up decides whether the movement reads or not. Three
+    findings, all from putting the treatments side by side on a device:
 
-/*  Dark, default treatment: a surface-toned plate and a dimmed image. Always
-    correct — it can never make an asset look wrong, only quieter. */
+    1. `filter: brightness()` was the wrong way to dim. It scales every channel,
+       which pulls the white ground down to grey AND compresses the mid-tone
+       shading that gives the figure its form. The result read as out of focus.
+       An overlay dims the same amount without touching the artwork's own
+       contrast, and the linework survives.
+    2. `image-rendering: -webkit-optimize-contrast` is a real gain here. The
+       default smooth resample is right for photographs; these are flat-shaded
+       line drawings, and letting the edges stay hard is visibly sharper at 4x.
+       Applied ONLY to the big demo, which upscales — the 52px thumbnails
+       DOWNscale from the same 180px source, and crisp-edge resampling there
+       aliases instead of helping.
+    3. The invert option still needs a real filter; nothing else can turn white
+       paper into dark ground. It is opt-in, and it is the one treatment that
+       accepts a little softness in exchange for a genuinely dark demo.        */
+
+/*  Light theme leaves them exactly as the dataset drew them. */
+:root[data-theme="light"] { --demo-bg:#fff; --demo-filter:none; --demo-dim:0 }
+
+/*  Dark, default: a surface-toned plate and an overlay — no filter on the
+    image, so its own contrast is untouched. */
 :root:not([data-theme="light"]) {
   --demo-bg:var(--surf-c-high);
-  --demo-filter:brightness(.78) contrast(1.06);
+  --demo-filter:none;
+  --demo-dim:.22;
 }
-/*  Dark, opt-in treatment: these are flat line illustrations on white, so an
-    inversion gives a genuinely dark demo with the figure intact. Hue-rotate puts
-    the colours back where they started. */
+/*  Dark, opt-in: inverted. Hue-rotate puts the colours back where they started. */
 :root:not([data-theme="light"])[data-demo="invert"] {
   --demo-bg:var(--surf-c);
   --demo-filter:invert(1) hue-rotate(180deg) brightness(.92);
+  --demo-dim:0;
 }
 /*  And an escape hatch for anyone who wants the source untouched. */
-:root[data-demo="plain"] { --demo-bg:#fff; --demo-filter:none }
+:root[data-demo="plain"] { --demo-bg:#fff; --demo-filter:none; --demo-dim:0 }
 
 /* ================================================================ RESET === */
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -685,10 +705,12 @@ h4.sec{
   transition:background var(--fast);text-align:left;width:100%;
 }
 .item:active{background:var(--surf-c-high)}
+/*  Thumbnails DOWNscale 180 -> 52, so they keep the smooth resample and take the
+    dim as a filter: an overlay would need a wrapper element on every row. */
 .thumb{
   width:52px;height:52px;border-radius:var(--r-md);object-fit:cover;
   background:var(--demo-bg,#fff);flex:none;
-  filter:var(--demo-filter,none);
+  filter:var(--demo-filter,none) brightness(calc(1 - var(--demo-dim,0)));
 }
 .thumb-x{
   display:flex;align-items:center;justify-content:center;font-size:22px;
@@ -984,7 +1006,20 @@ h4.sec{
 .exmedia img{
   width:100%;height:300px;object-fit:contain;display:block;
   filter:var(--demo-filter,none);
+  /* See the note over the demo tokens. Deliberately ONLY the -webkit- alias:
+     that is the value the side-by-side test on a device was run with and
+     approved. Chrome implements the standard `crisp-edges` as nearest-neighbour
+     in some versions, which at a 4.6x upscale is blocky rather than sharp —
+     shipping a value I had not actually looked at would be guessing. */
+  image-rendering:-webkit-optimize-contrast;
 }
+/* The dim, as an overlay rather than a filter. */
+.exmedia::after{
+  content:'';position:absolute;inset:0;pointer-events:none;
+  background:var(--surf-dim);opacity:var(--demo-dim,0);
+}
+/* The hint chips sit above it. */
+.exmedia .gifhint,.exmedia .giftoggle{z-index:1}
 .exmedia .gifhint,.exmedia .giftoggle{
   position:absolute;bottom:10px;display:inline-flex;align-items:center;gap:6px;
   background:color-mix(in oklab, var(--inv-surf) 92%, transparent);
@@ -1463,8 +1498,7 @@ h4.sec{
 .demo-opt.on .demo-lbl{color:var(--on-sec-c)}
 /* The swatch has to preview a treatment that is not the one in force, so each
    option restates the pair locally instead of inheriting from :root. */
-.demo-opt[data-demo="dim"]   .thumb{background:var(--surf-c-high);filter:brightness(.78) contrast(1.06)}
-.demo-opt[data-demo="invert"].thumb,
+.demo-opt[data-demo="dim"]   .thumb{background:var(--surf-c-high);filter:brightness(.78)}
 .demo-opt[data-demo="invert"] .thumb{background:var(--surf-c);filter:invert(1) hue-rotate(180deg) brightness(.92)}
 .demo-opt[data-demo="plain"] .thumb{background:#fff;filter:none}
 
