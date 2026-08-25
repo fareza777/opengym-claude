@@ -11,6 +11,7 @@
     "sync:android": "npm run build:mobile && cap sync android",
     "icons": "node scripts/gen-icons.mjs",
     "check:release": "node scripts/check-release.mjs",
+    "check:locales": "node scripts/check-locales.mjs",
     "android:apk": "npm run sync:android && cd android && gradlew assembleRelease",
     "android:bundle": "npm run check:release && npm run sync:android && cd android && gradlew bundleRelease",
     "preview": "vite preview",

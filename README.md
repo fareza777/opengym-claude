@@ -137,11 +137,25 @@ means never shipping an update to the listing again. Enrol in Play App Signing.
 cd frontend && npm test
 ```
 
+```bash
+npm run check:locales         # key parity across every language pack
+npm run check:release         # 24 release invariants
+```
+
 218 tests. The ones worth knowing about:
 [`planner.test.js`](frontend/src/lib/planner.test.js) asserts every generated
 plan resolves against the real dataset and never hands a barbell to someone who
-answered "no equipment"; [`locales.test.js`](frontend/src/locales/locales.test.js)
+answered "no equipment"; [`locales.test.js`](frontend/src/lib/locales.test.js)
 checks `{0}` placeholder parity across every language pack.
+
+### Known gap: the other eleven languages
+
+The onboarding flow and the offline settings added ~59 new strings. They exist in
+**English and Indonesian**; the other eleven packs fall back to English for those
+screens and are complete everywhere else. `npm run check:locales` lists exactly
+which keys, per language. Machine-translating them without a native reader would
+be worse than the fallback, so they are left as a deliberate, visible gap rather
+than a hidden one.
 
 ## Documentation
 

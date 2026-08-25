@@ -4,10 +4,13 @@
 // keys the established packs already agree on.
 
 import { describe, it, expect } from 'vitest'
-import { LANGS } from '../lib/i18n.js'
+import { LANGS } from './i18n.js'
 
-const packs = import.meta.glob('./*.js', { eager: true })
-const load = code => packs['./' + code + '.js']?.default
+// Lives in lib/, not locales/, on purpose: scripts/check-locales.mjs imports
+// every .js in src/locales/ as a locale pack, and a test file sitting there
+// crashes it on the Vite-only import.meta.glob this very line uses.
+const packs = import.meta.glob('../locales/*.js', { eager: true })
+const load = code => packs['../locales/' + code + '.js']?.default
 
 const CODES = Object.keys(LANGS).filter(c => c !== 'en')
 
